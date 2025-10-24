@@ -1,0 +1,65 @@
+# Raspberry Pi Boot Configuration Example for CAN-IDS
+# Copy relevant sections to /boot/config.txt
+
+# ============================
+# MCP2515 CAN HAT Configuration
+# ============================
+
+# Enable SPI interface
+dtparam=spi=on
+
+# MCP2515 CAN controller overlay
+# Adjust oscillator frequency and interrupt pin for your specific HAT
+dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25
+dtoverlay=spi-bcm2835
+
+# For dual CAN setup (if using two MCP2515 controllers)
+#dtoverlay=mcp2515-can1,oscillator=12000000,interrupt=24
+
+# ============================
+# Performance Optimizations
+# ============================
+
+# Disable Bluetooth (not needed for CAN-IDS)
+dtoverlay=disable-bt
+
+# Disable WiFi (uncomment if using Ethernet only)
+#dtoverlay=disable-wifi
+
+# Disable onboard audio
+dtparam=audio=off
+
+# Reduce GPU memory for headless operation
+gpu_mem=16
+
+# Enable hardware watchdog
+dtparam=watchdog=on
+
+# ============================
+# Optional: Overclocking
+# ============================
+# Use with caution - requires adequate cooling
+# These settings are for Pi 4B
+
+# Moderate overclock (safe with good cooling)
+#over_voltage=2
+#arm_freq=1750
+
+# ============================
+# Power Management
+# ============================
+
+# Disable USB power saving
+#max_usb_current=1
+
+# ============================
+# Temperature Management
+# ============================
+
+# Monitor temperature with:
+#   vcgencmd measure_temp
+#   vcgencmd get_throttled
+
+# Thermal limits (default values shown)
+#temp_limit=85
+#temp_soft_limit=60
