@@ -164,7 +164,7 @@ ip -details link show can0
 candump can0
 
 # In another terminal, run CAN-IDS
-python main.py -i can0 --config config/can_ids_rpi4.conf
+python main.py -i can0 --config config/can_ids_rpi4.yaml
 ```
 
 ### 5. Install as System Service
@@ -192,7 +192,7 @@ sudo journalctl -u can-ids.service -f
 
 ### Basic Configuration
 
-Edit `config/can_ids.conf`:
+Edit `config/can_ids.yaml`:
 
 ```yaml
 # CAN interface
@@ -237,7 +237,7 @@ If you have captured CAN traffic as PCAP:
 python main.py --mode replay --file path/to/capture.pcap
 
 # With custom configuration
-python main.py --mode replay --file capture.pcap --config config/can_ids_rpi4.conf
+python main.py --mode replay --file capture.pcap --config config/can_ids_rpi4.yaml
 ```
 
 ## Training ML Models
@@ -317,7 +317,7 @@ python main.py --mode replay --file suspicious.pcap --log-level DEBUG
 
 ```bash
 # Use virtual CAN for safe testing
-python main.py -i vcan0 --config config/can_ids.conf
+python main.py -i vcan0 --config config/can_ids.yaml
 ```
 
 ### 4. Production Deployment on Pi

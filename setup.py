@@ -94,7 +94,7 @@ setup(
         "": ["config/*.yaml", "config/*.conf", "data/samples/*.pcap"],
     },
     data_files=[
-        ("share/can-ids/config", ["config/can_ids.conf", "config/can_ids_rpi4.conf"]),
+        ("share/can-ids/config", ["config/can_ids.yaml", "config/can_ids_rpi4.yaml"]),
         ("share/can-ids/config", ["config/rules.yaml", "config/example_rules.yaml"]),
         ("share/can-ids/systemd", ["raspberry-pi/systemd/can-ids.service"]),
     ],

@@ -51,8 +51,8 @@ The CAN-IDS (Controller Area Network Intrusion Detection System) project has bee
 
 ### ✅ Configuration Files
 
-1. **`config/can_ids.conf`** - General configuration
-2. **`config/can_ids_rpi4.conf`** - Raspberry Pi 4 optimized settings
+1. **`config/can_ids.yaml`** - General configuration
+2. **`config/can_ids_rpi4.yaml`** - Raspberry Pi 4 optimized settings
 3. **`config/rules.yaml`** - Detection rules
    - 20+ pre-configured detection rules
    - DoS, replay, fuzzing, ECU impersonation detection
@@ -145,7 +145,7 @@ python main.py -i can0
 python main.py --mode replay --file traffic.pcap
 
 # Use Pi 4 optimized config
-python main.py -i can0 --config config/can_ids_rpi4.conf
+python main.py -i can0 --config config/can_ids_rpi4.yaml
 ```
 
 ### Raspberry Pi 4 Setup

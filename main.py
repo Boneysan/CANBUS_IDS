@@ -387,7 +387,7 @@ Examples:
   python main.py --mode replay --file traffic.pcap
   
   # Use custom configuration
-  python main.py -i can0 --config config/can_ids_rpi4.conf
+  python main.py -i can0 --config config/can_ids_rpi4.yaml
   
   # Enable debug logging
   python main.py -i can0 --log-level DEBUG
@@ -404,8 +404,8 @@ Examples:
     # Optional arguments
     parser.add_argument('--file', 
                        help='PCAP or candump log file for analysis')
-    parser.add_argument('--config', default='config/can_ids.conf',
-                       help='Configuration file path (default: config/can_ids.conf)')
+    parser.add_argument('--config', default='config/can_ids.yaml',
+                       help='Configuration file path (default: config/can_ids.yaml)')
     parser.add_argument('--log-level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
                        default='INFO', help='Logging level (default: INFO)')
     parser.add_argument('--version', action='version', version='CAN-IDS 1.0.0')

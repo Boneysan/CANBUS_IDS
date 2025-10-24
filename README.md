@@ -119,7 +119,7 @@ CAN-IDS addresses these threats by monitoring CAN bus traffic in real-time and d
 - Best for PCAP forensics and rule testing
 
 ### Raspberry Pi 4
-- Optimized configuration included (`can_ids_rpi4.conf`)
+- Optimized configuration included (`can_ids_rpi4.yaml`)
 - Perfect for embedded, in-vehicle deployment
 - Lower power consumption, compact form factor
 - Automotive-grade reliability when properly configured
@@ -191,7 +191,7 @@ python main.py -i can0
 python main.py --mode replay --file suspicious_traffic.pcap
 
 # Use specific configuration
-python main.py -i can0 --config config/can_ids_rpi4.conf
+python main.py -i can0 --config config/can_ids_rpi4.yaml
 
 # Enable debug logging
 python main.py -i can0 --log-level DEBUG
@@ -200,8 +200,8 @@ python main.py -i can0 --log-level DEBUG
 ## Configuration
 
 See the `config/` directory for configuration examples:
-- `can_ids.conf` - Main configuration file
-- `can_ids_rpi4.conf` - Raspberry Pi 4 optimized configuration
+- `can_ids.yaml` - Main configuration file
+- `can_ids_rpi4.yaml` - Raspberry Pi 4 optimized configuration
 - `rules.yaml` - Detection rule definitions
 - `example_rules.yaml` - Sample rules for common attacks
 
@@ -217,8 +217,8 @@ can-ids/
 ├── .gitignore               # Git ignore rules
 │
 ├── config/                   # Configuration files
-│   ├── can_ids.conf         # Main system configuration
-│   ├── can_ids_rpi4.conf    # Raspberry Pi 4 optimized config
+│   ├── can_ids.yaml         # Main system configuration
+│   ├── can_ids_rpi4.yaml    # Raspberry Pi 4 optimized config
 │   ├── rules.yaml           # Detection rule definitions
 │   └── example_rules.yaml   # Sample rules for common attacks
 │
