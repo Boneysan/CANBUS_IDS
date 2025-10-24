@@ -59,11 +59,28 @@ CAN-IDS addresses these threats by monitoring CAN bus traffic in real-time and d
 
 ## System Requirements
 
+### Platform Support
+
+**CAN-IDS runs on multiple platforms:**
+
+| Platform | Support Level | Notes |
+|----------|---------------|-------|
+| **Linux PC/Server** | ✅ Full Support | Native SocketCAN, best performance |
+| **Raspberry Pi 4** | ✅ Optimized | Special configs for embedded deployment |
+| **Windows PC** | ⚠️ Partial | Via WSL2 or USB CAN adapters |
+| **macOS** | ⚠️ Partial | USB CAN adapters, PCAP analysis |
+
 ### General Requirements
-- Linux operating system with kernel 2.6.25+ (for SocketCAN support)
-- Python 3.8 or higher
-- SocketCAN-compatible CAN interface
-- 100MB+ available storage for logs and models
+- **Operating System**: Linux (Ubuntu, Debian, Fedora, Raspberry Pi OS) recommended
+  - Windows: Requires WSL2 for SocketCAN or USB CAN adapter
+  - macOS: Requires USB CAN adapter
+- **Python**: 3.8 or higher
+- **CAN Interface**: 
+  - Linux: SocketCAN-compatible interface
+  - Windows/Mac: PCAN-USB, CANtact, SLCAN, or other python-can supported devices
+  - All platforms: PCAP file analysis (no hardware needed)
+- **Storage**: 100MB+ available for logs and models
+- **Memory**: 2GB+ RAM (512MB minimum for basic operation)
 
 ### Raspberry Pi 4 Specific
 - **Hardware**: Raspberry Pi 4 Model B (4GB or 8GB RAM recommended, 2GB minimum)
@@ -77,14 +94,41 @@ CAN-IDS addresses these threats by monitoring CAN bus traffic in real-time and d
 - **Power**: Official Raspberry Pi 4 USB-C power supply (5V/3A minimum)
 
 ### Optional Components
-- Real-Time Clock (RTC) module for accurate timestamps without network
+- Real-Time Clock (RTC) module for accurate timestamps without network (Pi only)
 - Ethernet connection for stable remote monitoring
 - UPS/battery backup for uninterrupted operation
 - Protective enclosure for vehicle/industrial deployment
 
+## Platform-Specific Notes
+
+### Linux PC
+- **Best performance** - full SocketCAN support
+- Ideal for development, high-throughput analysis, and ML training
+- All features fully supported
+- Recommended for production deployments handling >500k messages/sec
+
+### Windows PC
+- **Live monitoring**: Requires WSL2 (for SocketCAN) or USB CAN adapter
+- **PCAP analysis**: Fully supported without additional setup
+- **Development**: Excellent for rule development and offline analysis
+- **USB adapters supported**: PCAN-USB, CANtact, IXXAT, Vector, SLCAN
+
+### macOS
+- Similar to Windows - requires USB CAN adapter for live monitoring
+- PCAP analysis and development fully supported
+- Best for PCAP forensics and rule testing
+
+### Raspberry Pi 4
+- Optimized configuration included (`can_ids_rpi4.conf`)
+- Perfect for embedded, in-vehicle deployment
+- Lower power consumption, compact form factor
+- Automotive-grade reliability when properly configured
+
 ## Installation
 
-### Quick Start (Raspberry Pi 4)
+### Quick Start (Linux PC or Raspberry Pi 4)
+
+### Quick Start (Linux PC or Raspberry Pi 4)
 
 ```bash
 # 1. Update system
@@ -93,18 +137,20 @@ sudo apt update && sudo apt upgrade -y
 # 2. Install dependencies
 sudo apt install python3 python3-pip python3-venv can-utils git -y
 
-# 3. Enable SPI (for MCP2515 CAN HATs)
+# 3. For Raspberry Pi with MCP2515: Enable SPI
 sudo raspi-config
 # Navigate to: Interface Options → SPI → Enable
+# (Skip this step on regular Linux PC)
 
-# 4. Configure device tree overlay for MCP2515
+# 4. For Raspberry Pi with MCP2515: Configure device tree overlay
 sudo nano /boot/config.txt
 # Add these lines:
 # dtparam=spi=on
 # dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25
 # dtoverlay=spi-bcm2835
+# (Skip this step on regular Linux PC with other CAN hardware)
 
-# 5. Reboot
+# 5. Reboot (Raspberry Pi only, if configured SPI)
 sudo reboot
 
 # 6. Clone repository
