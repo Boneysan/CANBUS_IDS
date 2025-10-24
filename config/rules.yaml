@@ -1,0 +1,159 @@
+# CAN-IDS Detection Rules
+# Rule format:
+#   - name: "Rule Name"
+#     can_id: 0x123 (hex) or can_id_range: [0x100, 0x200]
+#     severity: CRITICAL|HIGH|MEDIUM|LOW
+#     description: "Description of what this rule detects"
+#     action: alert|log|block (block not implemented in v1.0)
+#     Additional rule-specific parameters below
+
+rules:
+  # Diagnostic session attacks
+  - name: "Unauthorized OBD-II Diagnostic Request"
+    can_id: 0x7DF
+    severity: HIGH
+    description: "OBD-II diagnostic request from unknown source"
+    action: alert
+    check_source: true
+    allowed_sources: []  # Empty means no sources allowed
+
+  - name: "UDS Diagnostic Session Control"
+    can_id: 0x7E0
+    data_pattern: "10 01"  # Session control service
+    severity: MEDIUM
+    description: "Diagnostic session control attempt"
+    action: alert
+
+  # Fuzzing detection
+  - name: "Invalid Data Length Code"
+    dlc_min: 0
+    dlc_max: 8
+    severity: MEDIUM
+    description: "CAN frame with invalid DLC detected"
+    action: alert
+    validate_dlc: true
+
+  - name: "Malformed CAN Frame"
+    check_frame_format: true
+    severity: HIGH
+    description: "Malformed or corrupted CAN frame detected"
+    action: alert
+
+  # DoS detection
+  - name: "High Frequency Message Attack"
+    can_id: 0x100
+    max_frequency: 1000  # messages per second
+    time_window: 1
+    severity: CRITICAL
+    description: "Possible denial of service attack - high message frequency"
+    action: alert
+
+  - name: "Bus Flooding Attack"
+    global_message_rate: 5000  # messages per second across all IDs
+    time_window: 1
+    severity: CRITICAL
+    description: "CAN bus flooding detected"
+    action: alert
+
+  # Replay attack detection
+  - name: "Suspicious Replay Pattern - ECU Communication"
+    can_id: 0x200
+    check_timing: true
+    expected_interval: 100  # ms
+    interval_variance: 10   # ms ±10ms tolerance
+    severity: HIGH
+    description: "Message timing inconsistent with normal ECU pattern"
+    action: alert
+
+  - name: "Exact Message Replay"
+    check_replay: true
+    replay_window: 5000  # ms - detect replays within 5 seconds
+    severity: HIGH
+    description: "Exact message replay detected"
+    action: alert
+
+  # ECU impersonation
+  - name: "Unauthorized Engine Control Message"
+    can_id: 0x300
+    allowed_sources: [0x10, 0x20]  # Only these ECUs should send this ID
+    severity: CRITICAL
+    description: "Engine control message from unauthorized ECU"
+    action: alert
+
+  - name: "Brake System Manipulation"
+    can_id: 0x220
+    check_data_integrity: true
+    severity: CRITICAL
+    description: "Potential brake system manipulation detected"
+    action: alert
+
+  # Security access attempts
+  - name: "Security Access Request"
+    can_id_range: [0x7E0, 0x7E7]
+    data_pattern: "27 *"  # UDS Security Access service
+    severity: HIGH
+    description: "Security access attempt detected"
+    action: alert
+
+  - name: "Seed Request Pattern"
+    data_contains: ["27 01", "27 03", "27 05"]
+    severity: MEDIUM
+    description: "Security seed request pattern"
+    action: alert
+
+  # Critical system messages
+  - name: "Emergency Brake Override"
+    can_id: 0x1A0
+    data_byte_0: 0xFF
+    severity: CRITICAL
+    description: "Emergency brake override command"
+    action: alert
+
+  - name: "Steering Angle Manipulation"
+    can_id: 0x2A0
+    check_steering_range: true
+    max_steering_angle: 540  # degrees
+    severity: CRITICAL
+    description: "Suspicious steering angle command"
+    action: alert
+
+  # Data integrity checks
+  - name: "Checksum Validation Failure"
+    check_checksum: true
+    severity: MEDIUM
+    description: "CAN message checksum validation failed"
+    action: log
+
+  - name: "Counter Sequence Error"
+    check_counter: true
+    severity: MEDIUM
+    description: "Message counter sequence error detected"
+    action: alert
+
+  # Anomalous data patterns
+  - name: "High Entropy Data"
+    entropy_threshold: 7.5  # bits
+    severity: LOW
+    description: "Unusually high data entropy (possible encryption/obfuscation)"
+    action: log
+
+  - name: "Repeated Data Pattern"
+    check_repetition: true
+    max_repetitions: 10
+    severity: LOW
+    description: "Excessive data pattern repetition"
+    action: log
+
+  # Network topology violations
+  - name: "Unknown CAN ID"
+    whitelist_mode: true
+    allowed_can_ids: [0x100, 0x200, 0x300, 0x1A0, 0x2A0, 0x220, 0x7DF, 0x7E0]
+    severity: MEDIUM
+    description: "Message from unknown/unauthorized CAN ID"
+    action: alert
+
+  - name: "Extended Frame in Standard Network"
+    frame_type: standard
+    severity: LOW
+    description: "Extended CAN frame in standard-only network"
+    action: log
