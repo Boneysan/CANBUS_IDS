@@ -354,6 +354,101 @@ class CANIDSApplication:
         logger.info("Shutdown signal received")
         self.shutdown()
         
+    def test_connectivity(self, interface: str) -> bool:
+        """
+        Test if CAN interface is accessible and has traffic.
+        
+        Args:
+            interface: CAN interface name
+            
+        Returns:
+            True if interface is working, False otherwise
+        """
+        logger.info(f"Testing CAN interface connectivity: {interface}")
+        
+        try:
+            # Test basic interface access
+            import can
+            bus = can.Bus(channel=interface, interface='socketcan')
+            
+            logger.info(f"✓ Successfully opened {interface}")
+            
+            # Test for traffic (5 second timeout)
+            logger.info("Checking for CAN traffic (5 second timeout)...")
+            message = bus.recv(timeout=5.0)
+            
+            if message:
+                logger.info(f"✓ Traffic detected: ID=0x{message.arbitration_id:03X}, DLC={message.dlc}")
+                bus.shutdown()
+                return True
+            else:
+                logger.warning("No traffic detected in 5 seconds")
+                bus.shutdown()
+                return True  # Interface works, just no traffic
+                
+        except Exception as e:
+            logger.error(f"Cannot access {interface}: {e}")
+            return False
+    
+    def monitor_traffic_simple(self, interface: str, duration: float = 10.0) -> Dict[str, Any]:
+        """
+        Simple traffic monitoring for connectivity testing.
+        
+        Args:
+            interface: CAN interface name
+            duration: Monitoring duration in seconds
+            
+        Returns:
+            Traffic statistics
+        """
+        logger.info(f"Monitoring {interface} for {duration} seconds...")
+        
+        stats = {
+            'messages_received': 0,
+            'unique_can_ids': 0,
+            'message_rate': 0.0,
+            'last_message_time': None
+        }
+        
+        try:
+            import can
+            bus = can.Bus(channel=interface, interface='socketcan')
+            
+            start_time = time.time()
+            unique_ids = set()
+            message_count = 0
+            
+            while time.time() - start_time < duration:
+                message = bus.recv(timeout=1.0)
+                
+                if message:
+                    message_count += 1
+                    unique_ids.add(message.arbitration_id)
+                    stats['last_message_time'] = time.time()
+                    
+                    # Log every 50th message
+                    if message_count % 50 == 0:
+                        elapsed = time.time() - start_time
+                        rate = message_count / elapsed
+                        logger.info(f"Messages: {message_count}, Rate: {rate:.1f} msg/s, IDs: {len(unique_ids)}")
+            
+            # Final statistics
+            total_time = time.time() - start_time
+            stats.update({
+                'messages_received': message_count,
+                'unique_can_ids': len(unique_ids),
+                'message_rate': message_count / total_time if total_time > 0 else 0.0
+            })
+            
+            logger.info(f"Monitoring complete: {message_count} messages, {len(unique_ids)} unique IDs, {stats['message_rate']:.1f} msg/s")
+            
+            bus.shutdown()
+            
+        except Exception as e:
+            logger.error(f"Error monitoring traffic: {e}")
+        
+        return stats
+
     def shutdown(self) -> None:
         """Shutdown CAN-IDS application."""
         logger.info("Shutting down CAN-IDS...")
@@ -383,6 +478,12 @@ Examples:
   # Monitor live CAN traffic
   python main.py -i can0
   
+  # Test interface connectivity
+  python main.py --test-interface can0
+  
+  # Monitor traffic for 30 seconds
+  python main.py --monitor-traffic can0 --duration 30
+  
   # Analyze PCAP file
   python main.py --mode replay --file traffic.pcap
   
@@ -400,6 +501,10 @@ Examples:
                            help='CAN interface for live monitoring (e.g., can0)')
     mode_group.add_argument('--mode', choices=['replay'],
                            help='Operation mode')
+    mode_group.add_argument('--test-interface',
+                           help='Test CAN interface connectivity')
+    mode_group.add_argument('--monitor-traffic',
+                           help='Monitor CAN traffic without detection')
     
     # Optional arguments
     parser.add_argument('--file', 
@@ -408,6 +513,8 @@ Examples:
                        help='Configuration file path (default: config/can_ids.yaml)')
     parser.add_argument('--log-level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
                        default='INFO', help='Logging level (default: INFO)')
+    parser.add_argument('--duration', type=float, default=30.0,
+                       help='Duration for traffic monitoring in seconds (default: 30)')
     parser.add_argument('--version', action='version', version='CAN-IDS 1.0.0')
     
     args = parser.parse_args()
@@ -421,13 +528,53 @@ Examples:
     logging.getLogger().setLevel(log_level)
     
     try:
-        # Initialize application
+        # Handle connectivity testing
+        if args.test_interface:
+            logger.info("CAN Interface Connectivity Test")
+            logger.info("=" * 50)
+            
+            app = CANIDSApplication(args.config)
+            success = app.test_connectivity(args.test_interface)
+            
+            if success:
+                logger.info("✓ Interface test successful")
+                sys.exit(0)
+            else:
+                logger.error("✗ Interface test failed")
+                sys.exit(1)
+        
+        # Handle traffic monitoring
+        if args.monitor_traffic:
+            logger.info("CAN Traffic Monitoring")
+            logger.info("=" * 50)
+            
+            app = CANIDSApplication(args.config)
+            stats = app.monitor_traffic_simple(args.monitor_traffic, args.duration)
+            
+            logger.info("\nMonitoring Results:")
+            logger.info(f"Messages received: {stats['messages_received']}")
+            logger.info(f"Unique CAN IDs: {stats['unique_can_ids']}")
+            logger.info(f"Average rate: {stats['message_rate']:.1f} msg/s")
+            
+            if stats['messages_received'] == 0:
+                logger.warning("No CAN traffic detected!")
+                logger.info("Suggestions:")
+                logger.info("  1. Check if CAN interface is up: ip link show")
+                logger.info("  2. Generate test traffic: cansend can0 123#DEADBEEF")
+                logger.info("  3. Use virtual CAN: sudo python scripts/setup_vcan.py")
+            
+            sys.exit(0)
+        
+        # Initialize application for normal operation
         app = CANIDSApplication(args.config)
         app.initialize_components()
         
         # Run based on mode
         if args.interface:
-            # Live monitoring mode
+            # Live monitoring mode - test connectivity first
+            if not app.test_connectivity(args.interface):
+                logger.warning("Interface connectivity test failed, but continuing anyway...")
+            
             app.start_live_monitoring(args.interface)
         elif args.mode == 'replay':
             # PCAP analysis mode

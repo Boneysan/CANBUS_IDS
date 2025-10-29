@@ -58,15 +58,14 @@ class CANSniffer:
             logger.info(f"Starting CAN sniffer on {self.interface}")
             
             self._bus = can.Bus(
-                interface=self.interface,
-                bustype=self.bustype,
-                bitrate=self.bitrate
+                channel=self.interface,
+                bustype=self.bustype
             )
             
             with self._stats_lock:
                 self._stats['start_time'] = time.time()
                 
-            logger.info(f"CAN sniffer started on {self.interface} at {self.bitrate} bps")
+            logger.info(f"CAN sniffer started on {self.interface}")
             
         except Exception as e:
             logger.error(f"Failed to start CAN sniffer: {e}")
