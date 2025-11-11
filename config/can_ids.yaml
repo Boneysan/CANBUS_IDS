@@ -33,6 +33,33 @@ ml_model:
   retrain_interval: 86400  # 24 hours in seconds
   auto_update: false
 
+# Enhanced ML Detection with Multi-Stage Pipeline
+ml_detection:
+  enable_multistage: true
+  
+  # Multi-stage settings
+  multistage:
+    models_dir: "models"
+    enable_adaptive_gating: true
+    enable_load_shedding: true
+    max_stage3_load: 0.15  # Limit Stage 3 to 15% for Pi4 optimization
+    enable_vehicle_calibration: false  # Disable until vehicle detection is stable
+    
+    # Stage thresholds
+    stage1_threshold: 0.0
+    stage2_threshold: 0.5  
+    stage3_threshold: 0.7
+    
+    # Performance monitoring
+    enable_performance_monitoring: true
+    stats_window_size: 1000
+  
+  # Fallback single-stage settings (if multistage fails)
+  fallback:
+    model_type: "isolation_forest"
+    contamination: 0.02
+    feature_window: 100
+
 # Performance settings
 performance:
   max_cpu_percent: 80
