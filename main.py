@@ -41,6 +41,7 @@ try:
     from src.preprocessing.normalizer import Normalizer
     from src.alerts.alert_manager import AlertManager
     from src.alerts.notifiers import create_notifiers
+    from src.monitoring.resource_monitor import ResourceMonitor
 except ImportError as e:
     logger.error(f"Error importing CAN-IDS modules: {e}")
     logger.error("Make sure you're running from the project root directory")
@@ -73,6 +74,7 @@ class CANIDSApplication:
         self.feature_extractor: Optional[FeatureExtractor] = None
         self.normalizer: Optional[Normalizer] = None
         self.alert_manager: Optional[AlertManager] = None
+        self.resource_monitor: Optional[ResourceMonitor] = None
         
         # Statistics
         self.stats = {
@@ -147,6 +149,19 @@ class CANIDSApplication:
             if self.ml_detector:
                 self.feature_extractor = FeatureExtractor()
                 logger.info("Feature extractor initialized")
+            
+            # Initialize resource monitoring if enabled
+            monitoring_config = self.config.get('monitoring', {})
+            if monitoring_config.get('enabled', False):
+                self.resource_monitor = ResourceMonitor(
+                    sample_interval=monitoring_config.get('sample_interval', 10.0),
+                    log_interval=monitoring_config.get('log_interval', 60.0),
+                    log_file=monitoring_config.get('log_file', 'logs/metrics.log'),
+                    console_output=monitoring_config.get('console_output', False),
+                    enable_alerts=monitoring_config.get('enable_alerts', True),
+                    alert_thresholds=monitoring_config.get('thresholds')
+                )
+                logger.info("Resource monitor initialized")
                 
             logger.info("All components initialized successfully")
             
@@ -175,6 +190,10 @@ class CANIDSApplication:
             
             # Start CAN sniffer
             self.can_sniffer.start()
+            
+            # Start resource monitoring if enabled
+            if self.resource_monitor:
+                self.resource_monitor.start()
             
             # Start monitoring loop
             self.running = True
@@ -221,6 +240,10 @@ class CANIDSApplication:
             else:
                 self.pcap_reader = PCAPReader(pcap_file)
                 
+            # Start resource monitoring if enabled
+            if self.resource_monitor:
+                self.resource_monitor.start()
+            
             # Start analysis
             self.running = True
             self.stats['start_time'] = time.time()
@@ -346,8 +369,12 @@ class CANIDSApplication:
             print(f"\nAlert Manager:")
             print(f"  Total alerts: {alert_stats['total_alerts']}")
             print(f"  Alerts by severity: {dict(alert_stats['alerts_by_severity'])}")
-            
-        print("="*60)
+        
+        # Resource monitoring statistics
+        if self.resource_monitor:
+            self.resource_monitor.print_summary()
+        else:
+            print("="*60)
         
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals."""
@@ -461,6 +488,9 @@ class CANIDSApplication:
         # Shutdown components
         if self.can_sniffer:
             self.can_sniffer.stop()
+        
+        if self.resource_monitor:
+            self.resource_monitor.stop()
             
         if self.alert_manager:
             self.alert_manager.shutdown()

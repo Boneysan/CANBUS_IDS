@@ -45,3 +45,17 @@ raspberry_pi:
   thermal_throttling_temp: 70  # Celsius
   log_rotation_size: 10MB
   use_tmpfs_logs: true
+
+# Resource monitoring (recommended for Pi 4)
+monitoring:
+  enabled: true  # Enable for Pi 4 production monitoring
+  sample_interval: 10.0  # Sample every 10 seconds
+  log_interval: 60.0  # Write to disk every 60 seconds
+  log_file: logs/metrics.log
+  console_output: false  # Keep false for performance
+  enable_alerts: true  # Alert on threshold violations
+  thresholds:
+    cpu_percent: 70.0  # Pi 4 thermal limit
+    memory_percent: 85.0  # Memory warning
+    cpu_temp_celsius: 70.0  # Temperature warning
+    cpu_temp_critical: 75.0  # Temperature critical
