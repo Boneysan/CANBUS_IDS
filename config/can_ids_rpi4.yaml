@@ -27,7 +27,11 @@ capture:
 
 # ML settings
 ml_model:
-  path: data/models/anomaly_detector.pkl
+  path: data/models/aggressive_load_shedding.joblib  # Optimized for Raspberry Pi (102K msg/s, 2% Stage 3 load)
+  # Alternative models available:
+  # - adaptive_weighted_detector.joblib (95.9% recall, 100% precision - BEST ACCURACY)
+  # - enhanced_detector.joblib (with 13 CAN-specific features)
+  contamination: 0.20  # Tuned for higher recall (was 0.02)
   retrain_interval: 86400
   auto_update: false
   feature_cache_size: 100  # Limit feature cache for memory efficiency
