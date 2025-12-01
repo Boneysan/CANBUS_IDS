@@ -8,6 +8,7 @@ and policy violations.
 import logging
 import yaml
 import time
+import math
 from typing import Dict, List, Any, Optional, Set
 from dataclasses import dataclass
 from pathlib import Path
@@ -389,7 +390,7 @@ class RuleEngine:
         for count in byte_counts.values():
             probability = count / data_len
             if probability > 0:
-                entropy -= probability * (probability).bit_length() - 1
+                entropy -= probability * math.log2(probability)
                 
         return entropy
         

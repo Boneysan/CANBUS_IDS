@@ -1,0 +1,35 @@
+[Unit]
+Description=CAN-IDS - Controller Area Network Intrusion Detection System
+Documentation=https://github.com/Boneysan/CANBUS_IDS
+After=network.target multi-user.target
+
+[Service]
+Type=simple
+User=boneysan
+Group=boneysan
+WorkingDirectory=/home/boneysan/Documents/Github/CANBUS_IDS
+Environment="PATH=/home/boneysan/Documents/Github/CANBUS_IDS/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStartPre=/bin/sleep 10
+ExecStartPre=/sbin/ip link set can0 type can bitrate 500000
+ExecStartPre=/sbin/ip link set up can0
+ExecStart=/home/boneysan/Documents/Github/CANBUS_IDS/venv/bin/python /home/boneysan/Documents/Github/CANBUS_IDS/main.py -i can0 --config /home/boneysan/Documents/Github/CANBUS_IDS/config/can_ids_rpi4.yaml
+ExecStop=/sbin/ip link set down can0
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=can-ids
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/boneysan/Documents/Github/CANBUS_IDS/logs /home/boneysan/Documents/Github/CANBUS_IDS/data
+
+# Resource limits
+MemoryLimit=512M
+CPUQuota=70%
+
+[Install]
+WantedBy=multi-user.target
