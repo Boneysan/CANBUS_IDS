@@ -9,7 +9,8 @@ rules_file: config/rules.yaml
 ml_threshold: 0.75
 detection_modes:
   - rule_based
-  - ml_based
+  # - ml_based  # Temporarily disabled - models need to be retrained in CANBUS_IDS context
+  # See docs/ML_MODEL_ISSUE.md for details
 
 # Alert settings
 alerts:

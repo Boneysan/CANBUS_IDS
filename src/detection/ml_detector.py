@@ -17,6 +17,23 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+# Import compatibility classes for Vehicle_Models trained models
+# These must be importable for unpickling Vehicle_Models models
+try:
+    from .vehicle_models_compat import SimpleRuleDetector
+    from .multistage_detector import MultiStageDetector
+    VEHICLE_MODELS_COMPAT = True
+    
+    # Register these classes globally so pickle can find them
+    import sys
+    import __main__
+    __main__.SimpleRuleDetector = SimpleRuleDetector
+    __main__.MultiStageDetector = MultiStageDetector
+    
+except ImportError:
+    logger.debug("Vehicle_Models compatibility classes not available")
+    VEHICLE_MODELS_COMPAT = False
+
 try:
     import joblib
     JOBLIB_AVAILABLE = True
@@ -187,9 +204,15 @@ class MLDetector:
             
         Returns:
             MLAlert if anomaly detected, None otherwise
+            
+        Raises:
+            RuntimeError: If detector is not trained or sklearn unavailable
         """
-        if not self.is_trained or not SKLEARN_AVAILABLE:
-            return None
+        if not SKLEARN_AVAILABLE:
+            raise RuntimeError("scikit-learn not available - cannot perform ML detection")
+        
+        if not self.is_trained:
+            raise RuntimeError("ML detector is not trained - cannot analyze messages")
             
         start_time = time.time()
         
@@ -451,7 +474,31 @@ class MLDetector:
             # Determine format by file extension
             if str(model_path).endswith('.joblib') and JOBLIB_AVAILABLE:
                 logger.info(f"Loading joblib model from {model_path}")
-                model_data = joblib.load(model_path)
+                
+                if VEHICLE_MODELS_COMPAT:
+                    # Use custom unpickler to redirect Vehicle_Models classes
+                    import io
+                    
+                    class VehicleModelsUnpickler(pickle.Unpickler):
+                        def find_class(self, module, name):
+                            # Redirect Vehicle_Models classes to our compatibility module
+                            if name == 'SimpleRuleDetector':
+                                return SimpleRuleDetector
+                            if name == 'MultiStageDetector':
+                                return MultiStageDetector
+                            # Otherwise use default behavior
+                            return super().find_class(module, name)
+                    
+                    # Joblib uses its own wrapper, so we need to patch it temporarily
+                    with open(model_path, 'rb') as f:
+                        # Read the file content
+                        file_content = f.read()
+                    
+                    # Use custom unpickler
+                    unpickler = VehicleModelsUnpickler(io.BytesIO(file_content))
+                    model_data = unpickler.load()
+                else:
+                    model_data = joblib.load(model_path)
             else:
                 logger.info(f"Loading pickle model from {model_path}")
                 with open(model_path, 'rb') as f:
