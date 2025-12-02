@@ -17,6 +17,30 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+# Import compatibility classes for Vehicle_Models trained models
+# These must be importable for unpickling Vehicle_Models models
+try:
+    from .vehicle_models_compat import SimpleRuleDetector
+    from .multistage_detector import MultiStageDetector
+    VEHICLE_MODELS_COMPAT = True
+    
+    # Register these classes globally so pickle can find them
+    import sys
+    import __main__
+    __main__.SimpleRuleDetector = SimpleRuleDetector
+    __main__.MultiStageDetector = MultiStageDetector
+    
+except ImportError:
+    logger.debug("Vehicle_Models compatibility classes not available")
+    VEHICLE_MODELS_COMPAT = False
+
+try:
+    import joblib
+    JOBLIB_AVAILABLE = True
+except ImportError:
+    JOBLIB_AVAILABLE = False
+    logger.debug("joblib not available, will use pickle for model loading")
+
 try:
     from sklearn.ensemble import IsolationForest
     from sklearn.preprocessing import StandardScaler
@@ -47,7 +71,7 @@ class MLDetector:
     """
     
     def __init__(self, model_path: Optional[str] = None, 
-                 contamination: float = 0.02,
+                 contamination: float = 0.20,
                  feature_window: int = 100):
         """
         Initialize ML detector.
@@ -97,8 +121,8 @@ class MLDetector:
         self.isolation_forest = IsolationForest(
             contamination=self.contamination,
             random_state=42,
-            n_estimators=100,
-            max_samples='auto',
+            n_estimators=300,
+            max_samples=0.5,
             bootstrap=True
         )
         
@@ -180,9 +204,15 @@ class MLDetector:
             
         Returns:
             MLAlert if anomaly detected, None otherwise
+            
+        Raises:
+            RuntimeError: If detector is not trained or sklearn unavailable
         """
-        if not self.is_trained or not SKLEARN_AVAILABLE:
-            return None
+        if not SKLEARN_AVAILABLE:
+            raise RuntimeError("scikit-learn not available - cannot perform ML detection")
+        
+        if not self.is_trained:
+            raise RuntimeError("ML detector is not trained - cannot analyze messages")
             
         start_time = time.time()
         
@@ -426,6 +456,8 @@ class MLDetector:
     def load_model(self, filepath: Optional[str] = None) -> None:
         """
         Load trained model from file.
+        Supports both pickle (.pkl) and joblib (.joblib) formats.
+        Can load multi-stage pipeline models from Vehicle_Models project.
         
         Args:
             filepath: Path to model file (uses self.model_path if None)
@@ -439,22 +471,76 @@ class MLDetector:
             raise FileNotFoundError(f"Model file not found: {model_path}")
             
         try:
-            with open(model_path, 'rb') as f:
-                model_data = pickle.load(f)
+            # Determine format by file extension
+            if str(model_path).endswith('.joblib') and JOBLIB_AVAILABLE:
+                logger.info(f"Loading joblib model from {model_path}")
                 
-            self.isolation_forest = model_data['isolation_forest']
-            self.scaler = model_data['scaler']
-            self.contamination = model_data.get('contamination', 0.02)
-            self.feature_window = model_data.get('feature_window', 100)
+                if VEHICLE_MODELS_COMPAT:
+                    # Use custom unpickler to redirect Vehicle_Models classes
+                    import io
+                    
+                    class VehicleModelsUnpickler(pickle.Unpickler):
+                        def find_class(self, module, name):
+                            # Redirect Vehicle_Models classes to our compatibility module
+                            if name == 'SimpleRuleDetector':
+                                return SimpleRuleDetector
+                            if name == 'MultiStageDetector':
+                                return MultiStageDetector
+                            # Otherwise use default behavior
+                            return super().find_class(module, name)
+                    
+                    # Joblib uses its own wrapper, so we need to patch it temporarily
+                    with open(model_path, 'rb') as f:
+                        # Read the file content
+                        file_content = f.read()
+                    
+                    # Use custom unpickler
+                    unpickler = VehicleModelsUnpickler(io.BytesIO(file_content))
+                    model_data = unpickler.load()
+                else:
+                    model_data = joblib.load(model_path)
+            else:
+                logger.info(f"Loading pickle model from {model_path}")
+                with open(model_path, 'rb') as f:
+                    model_data = pickle.load(f)
             
-            self.is_trained = True
-            self._stats['model_loaded'] = True
-            self.model_path = model_path
+            # Check if it's a multi-stage pipeline model (from Vehicle_Models)
+            if hasattr(model_data, 'stage1_model'):
+                logger.info("Detected multi-stage pipeline model")
+                # For multi-stage models, just mark as trained
+                # The model will be used as-is with its predict() method
+                self.isolation_forest = model_data  # Store entire pipeline
+                self.is_trained = True
+                self._stats['model_loaded'] = True
+                self.model_path = model_path
+                logger.info(f"Multi-stage pipeline loaded with {type(model_data).__name__}")
+                
+            # Check if it's a simple dict with model components
+            elif isinstance(model_data, dict):
+                self.isolation_forest = model_data['isolation_forest']
+                self.scaler = model_data.get('scaler')
+                self.contamination = model_data.get('contamination', 0.20)
+                self.feature_window = model_data.get('feature_window', 100)
+                
+                self.is_trained = True
+                self._stats['model_loaded'] = True
+                self.model_path = model_path
+                logger.info(f"Model components loaded from {model_path}")
+                
+            # Otherwise assume it's a direct sklearn model
+            else:
+                logger.info("Detected direct sklearn model")
+                self.isolation_forest = model_data
+                self.is_trained = True
+                self._stats['model_loaded'] = True
+                self.model_path = model_path
+                logger.info(f"Direct model loaded: {type(model_data).__name__}")
             
-            logger.info(f"Model loaded from {model_path}")
+            logger.info(f"✅ Model successfully loaded from {model_path}")
             
         except Exception as e:
             logger.error(f"Error loading model: {e}")
+            logger.warning("Model loading failed - will operate without trained model")
             raise
             
     def get_statistics(self) -> Dict[str, Any]:

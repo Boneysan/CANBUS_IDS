@@ -41,7 +41,6 @@ try:
     from src.preprocessing.normalizer import Normalizer
     from src.alerts.alert_manager import AlertManager
     from src.alerts.notifiers import create_notifiers
-    from src.monitoring.resource_monitor import ResourceMonitor
 except ImportError as e:
     logger.error(f"Error importing CAN-IDS modules: {e}")
     logger.error("Make sure you're running from the project root directory")
@@ -74,7 +73,6 @@ class CANIDSApplication:
         self.feature_extractor: Optional[FeatureExtractor] = None
         self.normalizer: Optional[Normalizer] = None
         self.alert_manager: Optional[AlertManager] = None
-        self.resource_monitor: Optional[ResourceMonitor] = None
         
         # Statistics
         self.stats = {
@@ -136,32 +134,56 @@ class CANIDSApplication:
             if 'ml_based' in detection_modes:
                 ml_config = self.config.get('ml_model', {})
                 model_path = ml_config.get('path')
+                contamination = ml_config.get('contamination', 0.20)
                 
-                self.ml_detector = MLDetector(model_path)
+                logger.info("=" * 60)
+                logger.info("INITIALIZING ML DETECTION")
+                logger.info("=" * 60)
                 
-                if model_path and Path(model_path).exists():
-                    self.ml_detector.load_model()
-                    logger.info("ML detector initialized with trained model")
-                else:
-                    logger.warning("ML detector initialized without trained model")
+                try:
+                    # Create ML detector
+                    self.ml_detector = MLDetector(
+                        model_path=model_path,
+                        contamination=contamination
+                    )
                     
-            # Initialize feature extractor for ML
-            if self.ml_detector:
-                self.feature_extractor = FeatureExtractor()
-                logger.info("Feature extractor initialized")
+                    # Verify model exists
+                    if not model_path:
+                        raise ValueError("ML model path not configured in config file!")
+                    
+                    model_file = Path(model_path)
+                    if not model_file.exists():
+                        raise FileNotFoundError(f"ML model file not found: {model_path}")
+                    
+                    # Load model
+                    logger.info(f"Loading ML model: {model_path}")
+                    self.ml_detector.load_model()
+                    
+                    # Verify training status
+                    if not self.ml_detector.is_trained:
+                        raise RuntimeError("Model loaded but not marked as trained!")
+                    
+                    logger.info("✅ ML DETECTION ENABLED")
+                    logger.info(f"   Model: {model_file.name}")
+                    logger.info(f"   Size: {model_file.stat().st_size / 1024:.1f} KB")
+                    logger.info(f"   Contamination: {contamination}")
+                    logger.info(f"   Trained: {self.ml_detector.is_trained}")
+                    logger.info("=" * 60)
+                    
+                except Exception as e:
+                    logger.error("=" * 60)
+                    logger.error("❌ ML DETECTION INITIALIZATION FAILED")
+                    logger.error(f"   Error: {e}")
+                    logger.error("   ML detection will be DISABLED for this session")
+                    logger.error("   Only rule-based detection will be active")
+                    logger.error("=" * 60)
+                    self.ml_detector = None
+                    
+                    # If ML was explicitly marked as required, this is critical
+                    if ml_config.get('required', False):
+                        raise RuntimeError("ML detection is required but failed to initialize")
             
-            # Initialize resource monitoring if enabled
-            monitoring_config = self.config.get('monitoring', {})
-            if monitoring_config.get('enabled', False):
-                self.resource_monitor = ResourceMonitor(
-                    sample_interval=monitoring_config.get('sample_interval', 10.0),
-                    log_interval=monitoring_config.get('log_interval', 60.0),
-                    log_file=monitoring_config.get('log_file', 'logs/metrics.log'),
-                    console_output=monitoring_config.get('console_output', False),
-                    enable_alerts=monitoring_config.get('enable_alerts', True),
-                    alert_thresholds=monitoring_config.get('thresholds')
-                )
-                logger.info("Resource monitor initialized")
+            # Note: FeatureExtractor removed - ML detector handles its own feature extraction internally
                 
             logger.info("All components initialized successfully")
             
@@ -190,10 +212,6 @@ class CANIDSApplication:
             
             # Start CAN sniffer
             self.can_sniffer.start()
-            
-            # Start resource monitoring if enabled
-            if self.resource_monitor:
-                self.resource_monitor.start()
             
             # Start monitoring loop
             self.running = True
@@ -240,10 +258,6 @@ class CANIDSApplication:
             else:
                 self.pcap_reader = PCAPReader(pcap_file)
                 
-            # Start resource monitoring if enabled
-            if self.resource_monitor:
-                self.resource_monitor.start()
-            
             # Start analysis
             self.running = True
             self.stats['start_time'] = time.time()
@@ -297,36 +311,39 @@ class CANIDSApplication:
                     self.alert_manager.process_alert(alert_data)
                     self.stats['alerts_generated'] += 1
                     
-            # ML-based detection
-            if self.ml_detector and self.feature_extractor:
-                # Extract features
-                features = self.feature_extractor.extract_features(message)
-                
-                # Normalize features if normalizer available
-                if self.normalizer:
-                    features = self.normalizer.transform(features)
+            # ML-based detection (ML detector handles its own feature extraction internally)
+            if self.ml_detector:
+                try:
+                    ml_alert = self.ml_detector.analyze_message(message)
                     
-                # ML detection
-                ml_alert = self.ml_detector.analyze_message(message)
-                
-                if ml_alert:
-                    alert_data = {
-                        'timestamp': ml_alert.timestamp,
-                        'rule_name': 'ML Anomaly Detection',
-                        'severity': 'MEDIUM',  # Default ML severity
-                        'description': f"ML anomaly detected (score: {ml_alert.anomaly_score:.3f})",
-                        'can_id': ml_alert.can_id,
-                        'message_data': ml_alert.message_data,
-                        'confidence': ml_alert.confidence,
-                        'source': 'ml_detector',
-                        'additional_info': {
-                            'anomaly_score': ml_alert.anomaly_score,
-                            'features': ml_alert.features
+                    if ml_alert:
+                        alert_data = {
+                            'timestamp': ml_alert.timestamp,
+                            'rule_name': 'ML Anomaly Detection',
+                            'severity': 'MEDIUM',  # Default ML severity
+                            'description': f"ML anomaly detected (score: {ml_alert.anomaly_score:.3f})",
+                            'can_id': ml_alert.can_id,
+                            'message_data': ml_alert.message_data,
+                            'confidence': ml_alert.confidence,
+                            'source': 'ml_detector',
+                            'additional_info': {
+                                'anomaly_score': ml_alert.anomaly_score,
+                                'features': ml_alert.features
+                            }
                         }
-                    }
+                        
+                        self.alert_manager.process_alert(alert_data)
+                        self.stats['alerts_generated'] += 1
+                        
+                except RuntimeError as e:
+                    # ML not properly initialized - disable it permanently for this run
+                    logger.error(f"ML detection failed: {e}")
+                    logger.error("Disabling ML detection for remainder of this session")
+                    self.ml_detector = None
                     
-                    self.alert_manager.process_alert(alert_data)
-                    self.stats['alerts_generated'] += 1
+                except Exception as e:
+                    # Log other ML errors but don't crash the system
+                    logger.debug(f"ML analysis error for message ID 0x{message['can_id']:03X}: {e}")
                     
         except Exception as e:
             self.stats['processing_errors'] += 1
@@ -369,12 +386,8 @@ class CANIDSApplication:
             print(f"\nAlert Manager:")
             print(f"  Total alerts: {alert_stats['total_alerts']}")
             print(f"  Alerts by severity: {dict(alert_stats['alerts_by_severity'])}")
-        
-        # Resource monitoring statistics
-        if self.resource_monitor:
-            self.resource_monitor.print_summary()
-        else:
-            print("="*60)
+            
+        print("="*60)
         
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals."""
@@ -488,9 +501,6 @@ class CANIDSApplication:
         # Shutdown components
         if self.can_sniffer:
             self.can_sniffer.stop()
-        
-        if self.resource_monitor:
-            self.resource_monitor.stop()
             
         if self.alert_manager:
             self.alert_manager.shutdown()

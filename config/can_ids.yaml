@@ -9,7 +9,8 @@ rules_file: config/rules.yaml
 ml_threshold: 0.75
 detection_modes:
   - rule_based
-  - ml_based
+  # - ml_based  # Temporarily disabled - models need to be retrained in CANBUS_IDS context
+  # See docs/ML_MODEL_ISSUE.md for details
 
 # Alert settings
 alerts:
@@ -29,7 +30,11 @@ capture:
 
 # ML settings
 ml_model:
-  path: data/models/anomaly_detector.pkl
+  path: data/models/aggressive_load_shedding.joblib  # Optimized multi-stage pipeline
+  # Alternative models available:
+  # - adaptive_weighted_detector.joblib (95.9% recall, 100% precision - BEST ACCURACY)
+  # - enhanced_detector.joblib (with 13 CAN-specific features)
+  contamination: 0.20  # Tuned for higher recall (was 0.02)
   retrain_interval: 86400  # 24 hours in seconds
   auto_update: false
 
@@ -65,17 +70,3 @@ performance:
   max_cpu_percent: 80
   max_memory_mb: 500
   processing_threads: 2
-
-# Resource monitoring
-monitoring:
-  enabled: false  # Enable for production monitoring
-  sample_interval: 10.0  # Seconds between samples
-  log_interval: 60.0  # Seconds between log writes
-  log_file: logs/metrics.log
-  console_output: false  # Print metrics to console
-  enable_alerts: true  # Alert on threshold violations
-  thresholds:
-    cpu_percent: 80.0
-    memory_percent: 85.0
-    cpu_temp_celsius: 75.0
-    cpu_temp_critical: 80.0
