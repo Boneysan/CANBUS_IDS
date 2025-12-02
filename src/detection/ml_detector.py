@@ -517,15 +517,28 @@ class MLDetector:
                 
             # Check if it's a simple dict with model components
             elif isinstance(model_data, dict):
-                self.isolation_forest = model_data['isolation_forest']
-                self.scaler = model_data.get('scaler')
-                self.contamination = model_data.get('contamination', 0.20)
-                self.feature_window = model_data.get('feature_window', 100)
-                
-                self.is_trained = True
-                self._stats['model_loaded'] = True
-                self.model_path = model_path
-                logger.info(f"Model components loaded from {model_path}")
+                # Handle multi-stage dict format (stage1_model, stage2_rules, stage3_ensemble)
+                if 'stage1_model' in model_data:
+                    logger.info("Detected multi-stage dict format")
+                    self.isolation_forest = model_data['stage1_model']
+                    self.scaler = model_data.get('scaler')
+                    self.contamination = model_data.get('config', {}).get('contamination', 0.20)
+                    self.is_trained = True
+                    self._stats['model_loaded'] = True
+                    self.model_path = model_path
+                    logger.info(f"Multi-stage components loaded from {model_path}")
+                # Handle standard dict format (isolation_forest, scaler, etc.)
+                elif 'isolation_forest' in model_data:
+                    self.isolation_forest = model_data['isolation_forest']
+                    self.scaler = model_data.get('scaler')
+                    self.contamination = model_data.get('contamination', 0.20)
+                    self.feature_window = model_data.get('feature_window', 100)
+                    self.is_trained = True
+                    self._stats['model_loaded'] = True
+                    self.model_path = model_path
+                    logger.info(f"Model components loaded from {model_path}")
+                else:
+                    raise ValueError(f"Unknown dict format, expected 'isolation_forest' or 'stage1_model' key")
                 
             # Otherwise assume it's a direct sklearn model
             else:

@@ -206,3 +206,6 @@ test-reports/
 local_test_data/
 scratch/
 playground/academic_test_results/
+
+# ML Models (too large for GitHub)
+data/models/*.joblib
