@@ -1,0 +1,74 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01/standstill-1.csv",
+    "test_date": "2025-11-30T23:35:25.025278",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 179.7333333492279,
+    "messages_processed": 1955048,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 10877.492580640432,
+    "alerts_generated": 7820947,
+    "alert_rate_percent": 400.038617977666,
+    "alerts_by_severity": {
+      "MEDIUM": 5865899,
+      "LOW": 1955048
+    },
+    "alerts_by_type": {
+      "Checksum Validation Failure": 1955048,
+      "Counter Sequence Error": 1955048,
+      "High Entropy Data": 1955048,
+      "Unknown CAN ID": 1955048,
+      "Seed Request Pattern": 755
+    },
+    "detection_accuracy": {
+      "true_positives": 2215,
+      "false_positives": 1952833,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.001132964510334273,
+      "recall": 1.0,
+      "f1_score": 0.0022633647087795562,
+      "accuracy": 0.001132964510334273
+    },
+    "latency_ms": {
+      "mean": 0.07393755917697795,
+      "median": 0.072479248046875,
+      "min": 0.06461143493652344,
+      "max": 9.022235870361328,
+      "p95": 0.08296966552734375,
+      "p99": 0.10800361633300781
+    }
+  },
+  "system": {
+    "total_samples": 108,
+    "duration_seconds": 179.17566800117493,
+    "cpu_percent": {
+      "mean": 25.185648148148132,
+      "max": 30.875,
+      "min": 21.35
+    },
+    "cpu_percent_system": {
+      "mean": 29.195370370370373,
+      "max": 100.0,
+      "min": 22.9
+    },
+    "memory_rss_mb": {
+      "mean": 675.6774811921297,
+      "max": 764.51953125,
+      "min": 125.1875
+    },
+    "temperature_c": {
+      "mean": 47.881481481481394,
+      "max": 49.1,
+      "min": 46.7
+    },
+    "throttling_occurred": false
+  }
+}

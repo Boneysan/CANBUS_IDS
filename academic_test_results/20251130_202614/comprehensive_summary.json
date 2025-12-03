@@ -1,0 +1,37 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01/attack-free-1.csv",
+    "test_date": "2025-11-30T20:26:19.238211",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {},
+  "system": {
+    "total_samples": 2,
+    "duration_seconds": 2.513148307800293,
+    "cpu_percent": {
+      "mean": 102.35,
+      "max": 108.9,
+      "min": 95.8
+    },
+    "cpu_percent_system": {
+      "mean": 94.25,
+      "max": 98.3,
+      "min": 90.2
+    },
+    "memory_rss_mb": {
+      "mean": 144.27734375,
+      "max": 161.25,
+      "min": 127.3046875
+    },
+    "temperature_c": {
+      "mean": 45.2,
+      "max": 45.2,
+      "min": 45.2
+    },
+    "throttling_occurred": false
+  }
+}
