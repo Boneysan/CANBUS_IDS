@@ -44,6 +44,34 @@ class DetectionRule:
     whitelist_mode: bool = False
     allowed_can_ids: Optional[List[int]] = None
     
+    # Phase 1 Critical Parameters (Dec 2, 2025)
+    validate_dlc: bool = False                    # Strict DLC validation
+    check_frame_format: bool = False              # Frame format checking
+    global_message_rate: Optional[int] = None     # Global rate monitoring
+    
+    # Phase 2 Important Parameters (Dec 2, 2025)
+    check_source: bool = False                    # Source validation for diagnostics
+    check_replay: bool = False                    # Replay attack detection
+    data_byte_0: Optional[int] = None             # Expected value for data byte 0
+    data_byte_1: Optional[int] = None             # Expected value for data byte 1
+    data_byte_2: Optional[int] = None             # Expected value for data byte 2
+    data_byte_3: Optional[int] = None             # Expected value for data byte 3
+    data_byte_4: Optional[int] = None             # Expected value for data byte 4
+    data_byte_5: Optional[int] = None             # Expected value for data byte 5
+    data_byte_6: Optional[int] = None             # Expected value for data byte 6
+    data_byte_7: Optional[int] = None             # Expected value for data byte 7
+    replay_time_threshold: Optional[float] = None # Max time between replays (seconds)
+    
+    # Phase 3 Specialized Parameters (Dec 2, 2025)
+    check_data_integrity: bool = False            # Data integrity validation
+    check_steering_range: bool = False            # Steering angle validation
+    check_repetition: bool = False                # Repetitive pattern detection
+    frame_type: Optional[str] = None              # Expected frame type ('standard' or 'extended')
+    steering_min: Optional[float] = None          # Min steering angle (degrees)
+    steering_max: Optional[float] = None          # Max steering angle (degrees)
+    repetition_threshold: Optional[int] = None    # Max consecutive identical messages
+    integrity_checksum_offset: Optional[int] = None # Byte offset for integrity checksum
+    
     def matches_can_id(self, can_id: int) -> bool:
         """Check if CAN ID matches rule criteria."""
         if self.can_id is not None:
@@ -91,6 +119,16 @@ class RuleEngine:
         self._frequency_counters = defaultdict(deque)  # CAN ID -> timestamps
         self._timing_analysis = defaultdict(list)  # CAN ID -> intervals
         self._sequence_counters = defaultdict(int)  # CAN ID -> expected counter
+        
+        # Phase 1 state tracking (Dec 2, 2025)
+        self._global_message_times = deque(maxlen=10000)  # Global rate tracking
+        
+        # Phase 2 state tracking (Dec 2, 2025)
+        self._message_signatures = defaultdict(lambda: {'data': None, 'timestamp': None, 'count': 0})  # Replay detection
+        self._source_tracking = defaultdict(set)  # CAN ID -> set of source IDs seen
+        
+        # Phase 3 state tracking (Dec 2, 2025)
+        self._data_repetition_counts = defaultdict(lambda: {'data': None, 'count': 0})  # Repetition tracking
         
         self._stats = {
             'rules_loaded': 0,
@@ -200,12 +238,62 @@ class RuleEngine:
         # CAN ID matching
         if not rule.matches_can_id(can_id):
             return False
+        
+        # Phase 1 Critical Checks (Dec 2, 2025)
+        
+        # 1. Strict DLC validation
+        if rule.validate_dlc and not self._validate_dlc_strict(rule, message):
+            return True  # DLC violation detected
+        
+        # 2. Frame format checking
+        if rule.check_frame_format and not self._check_frame_format(message):
+            return True  # Malformed frame detected
+        
+        # 3. Global message rate monitoring
+        if rule.global_message_rate and self._check_global_message_rate(rule, message['timestamp']):
+            return True  # Bus flooding detected
+        
+        # Phase 2 Important Checks (Dec 2, 2025)
+        
+        # 4. Source validation for diagnostics
+        if rule.check_source and not self._validate_source_enhanced(rule, message):
+            return True  # Unauthorized diagnostic source detected
+        
+        # 5. Replay attack detection
+        if rule.check_replay and self._check_replay_attack(rule, message):
+            return True  # Replay attack detected
+        
+        # 6. Data byte validation
+        if any([rule.data_byte_0, rule.data_byte_1, rule.data_byte_2, rule.data_byte_3,
+                rule.data_byte_4, rule.data_byte_5, rule.data_byte_6, rule.data_byte_7]) is not None:
+            if not self._validate_data_bytes(rule, message):
+                return True  # Data byte mismatch detected
+        
+        # Phase 3 Specialized Checks (Dec 2, 2025)
+        
+        # 7. Data integrity validation
+        if rule.check_data_integrity and not self._check_data_integrity(rule, message):
+            return True  # Data integrity failure detected
+        
+        # 8. Steering range validation
+        if rule.check_steering_range and not self._check_steering_range(rule, message):
+            return True  # Steering angle out of range detected
+        
+        # 9. Repetition pattern detection
+        if rule.check_repetition and self._check_repetition_pattern(rule, message):
+            return True  # Repetition attack detected
+        
+        # 10. Frame type validation
+        if rule.frame_type and not self._validate_frame_type(rule, message):
+            return True  # Frame type violation detected
             
-        # DLC validation
-        if rule.dlc_min is not None and message['dlc'] < rule.dlc_min:
-            return True  # Invalid DLC detected
-        if rule.dlc_max is not None and message['dlc'] > rule.dlc_max:
-            return True  # Invalid DLC detected
+        # Legacy DLC validation (only if validate_dlc is not enabled)
+        # Note: When validate_dlc is True, strict validation is used instead
+        if not rule.validate_dlc:
+            if rule.dlc_min is not None and message['dlc'] < rule.dlc_min:
+                return True  # Invalid DLC detected
+            if rule.dlc_max is not None and message['dlc'] > rule.dlc_max:
+                return True  # Invalid DLC detected
             
         # Data pattern matching
         if rule.data_pattern and not self._match_data_pattern(rule.data_pattern, message['data']):
@@ -238,8 +326,14 @@ class RuleEngine:
         # Entropy analysis
         if rule.entropy_threshold and self._calculate_entropy(message['data']) > rule.entropy_threshold:
             return True
+        
+        # Whitelist mode: if specified, alert on CAN IDs NOT in the whitelist
+        if rule.whitelist_mode and rule.allowed_can_ids:
+            if can_id not in rule.allowed_can_ids:
+                return True
             
-        return True  # Rule matches if we get here
+        # If we reach here, no violations detected
+        return False
         
     def _update_message_history(self, message: Dict[str, Any]) -> None:
         """Update message history for stateful analysis."""
@@ -393,6 +487,554 @@ class RuleEngine:
                 entropy -= probability * math.log2(probability)
                 
         return entropy
+    
+    # ========================================================================
+    # PHASE 1 CRITICAL VALIDATION METHODS (Dec 2, 2025)
+    # Implementing 3 critical rule parameters for basic dual-detection
+    # ========================================================================
+    
+    def _validate_dlc_strict(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Strict DLC (Data Length Code) validation.
+        
+        Validates that:
+        - DLC is within valid CAN range (0-8)
+        - DLC matches actual data length
+        - DLC meets rule-specific requirements
+        
+        Args:
+            rule: Detection rule with DLC requirements
+            message: CAN message to validate
+            
+        Returns:
+            True if DLC is valid, False if violation detected
+            
+        Implementation: Phase 1, Parameter 1
+        """
+        if not rule.validate_dlc:
+            return True
+            
+        dlc = message['dlc']
+        
+        # CAN 2.0 specification: DLC must be 0-8
+        if dlc < 0 or dlc > 8:
+            logger.debug(f"DLC violation: DLC={dlc} out of valid range [0-8]")
+            return False
+            
+        # Validate data length matches DLC
+        actual_length = len(message['data'])
+        if actual_length != dlc:
+            logger.debug(f"DLC mismatch: DLC={dlc} but data length={actual_length}")
+            return False
+            
+        # Check against rule-specific DLC range if specified
+        if rule.dlc_min is not None and dlc < rule.dlc_min:
+            logger.debug(f"DLC below minimum: DLC={dlc} < min={rule.dlc_min}")
+            return False
+            
+        if rule.dlc_max is not None and dlc > rule.dlc_max:
+            logger.debug(f"DLC above maximum: DLC={dlc} > max={rule.dlc_max}")
+            return False
+            
+        return True
+    
+    def _check_frame_format(self, message: Dict[str, Any]) -> bool:
+        """
+        Validate CAN frame format and structure.
+        
+        Checks for:
+        - Valid CAN ID range (standard: 11-bit, extended: 29-bit)
+        - Proper DLC range
+        - Data field consistency
+        - Error frame detection
+        
+        Args:
+            message: CAN message to validate
+            
+        Returns:
+            True if frame format is valid, False if malformed
+            
+        Implementation: Phase 1, Parameter 2
+        """
+        can_id = message['can_id']
+        is_extended = message.get('is_extended', False)
+        dlc = message['dlc']
+        data = message['data']
+        
+        # Validate CAN ID range based on frame type
+        if not is_extended:
+            # Standard CAN: 11-bit ID (0x000 - 0x7FF)
+            if can_id > 0x7FF:
+                logger.debug(f"Standard frame CAN ID out of range: 0x{can_id:X} > 0x7FF")
+                return False
+        else:
+            # Extended CAN: 29-bit ID (0x00000000 - 0x1FFFFFFF)
+            if can_id > 0x1FFFFFFF:
+                logger.debug(f"Extended frame CAN ID out of range: 0x{can_id:X} > 0x1FFFFFFF")
+                return False
+        
+        # Validate DLC range (0-8 for CAN 2.0)
+        if dlc < 0 or dlc > 8:
+            logger.debug(f"Invalid DLC in frame: {dlc}")
+            return False
+        
+        # Validate data field length matches DLC
+        if len(data) != dlc:
+            logger.debug(f"Data length mismatch: DLC={dlc}, data_len={len(data)}")
+            return False
+        
+        # Check for error frames
+        if message.get('is_error', False):
+            logger.debug(f"Error frame detected for CAN ID 0x{can_id:X}")
+            return False
+        
+        # Check for remote frames (RTR)
+        # Remote frames should have DLC but no data
+        is_remote = message.get('is_remote', False)
+        if is_remote and len(data) > 0:
+            logger.debug(f"Remote frame with data: CAN ID 0x{can_id:X}")
+            return False
+        
+        return True
+    
+    def _check_global_message_rate(self, rule: DetectionRule, timestamp: float) -> bool:
+        """
+        Check if global message rate exceeds threshold.
+        
+        Monitors total message rate across all CAN IDs to detect
+        bus flooding attacks (DoS).
+        
+        Args:
+            rule: Detection rule with global rate threshold
+            timestamp: Current message timestamp
+            
+        Returns:
+            True if rate threshold exceeded (attack detected)
+            False if rate is normal
+            
+        Implementation: Phase 1, Parameter 3
+        """
+        if not rule.global_message_rate or not rule.time_window:
+            return False
+        
+        # Add current timestamp to global tracking
+        self._global_message_times.append(timestamp)
+        
+        # Count messages within the time window
+        cutoff_time = timestamp - rule.time_window
+        message_count = sum(1 for t in self._global_message_times if t >= cutoff_time)
+        
+        # Check if rate exceeded
+        if message_count > rule.global_message_rate:
+            logger.debug(f"Global message rate exceeded: {message_count} > {rule.global_message_rate} in {rule.time_window}s")
+            return True
+        
+        return False
+    
+    # ========================================================================
+    # END PHASE 1 METHODS
+    # ========================================================================
+    
+    # ========================================================================
+    # PHASE 2 IMPORTANT VALIDATION METHODS (Dec 2, 2025)
+    # Implementing 3 important rule parameters for production deployment
+    # ========================================================================
+    
+    def _validate_source_enhanced(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Enhanced source validation for diagnostic requests.
+        
+        Validates that diagnostic messages (OBD-II, UDS) come from
+        authorized sources only. Prevents unauthorized diagnostic access.
+        
+        Common diagnostic CAN IDs:
+        - 0x7DF: Broadcast diagnostic request
+        - 0x7E0-0x7E7: Physical diagnostic requests
+        - 0x7E8-0x7EF: Diagnostic responses
+        
+        Args:
+            rule: Detection rule with allowed_sources list
+            message: CAN message to validate
+            
+        Returns:
+            True if source is valid, False if unauthorized source detected
+            
+        Implementation: Phase 2, Parameter 1
+        """
+        if not rule.check_source:
+            return True
+            
+        can_id = message['can_id']
+        
+        # Check if this is a diagnostic message
+        is_diagnostic = (
+            can_id == 0x7DF or  # Broadcast diagnostic
+            (0x7E0 <= can_id <= 0x7E7) or  # Physical diagnostic request
+            (0x7E8 <= can_id <= 0x7EF)     # Diagnostic response
+        )
+        
+        if not is_diagnostic:
+            return True  # Not a diagnostic message, source check not applicable
+        
+        # Get source identifier from message (if available)
+        # In CAN, source can be derived from arbitration ID or data field
+        source_id = message.get('source_id', None)
+        
+        # If no source_id in message, try to extract from CAN ID
+        # For diagnostic messages, source is typically in the lower nibble
+        if source_id is None:
+            if 0x7E0 <= can_id <= 0x7E7:
+                source_id = can_id - 0x7E0  # Extract ECU number
+            elif 0x7E8 <= can_id <= 0x7EF:
+                source_id = can_id - 0x7E8  # Extract ECU number
+        
+        # Track sources seen for this CAN ID
+        self._source_tracking[can_id].add(source_id)
+        
+        # Check against allowed sources if specified
+        if rule.allowed_sources:
+            if source_id not in rule.allowed_sources:
+                logger.debug(f"Unauthorized diagnostic source: ID={source_id}, CAN=0x{can_id:X}, allowed={rule.allowed_sources}")
+                return False
+        
+        # Additional check: too many different sources for one CAN ID is suspicious
+        if len(self._source_tracking[can_id]) > 3:
+            logger.debug(f"Too many sources for CAN ID 0x{can_id:X}: {len(self._source_tracking[can_id])} sources")
+            return False
+        
+        return True
+    
+    def _check_replay_attack(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Detect replay attacks by identifying identical message patterns.
+        
+        Replay attacks involve capturing and retransmitting legitimate
+        messages. Detection looks for:
+        - Exact data field matches
+        - Messages repeated within a suspicious time window
+        - Unusual repetition patterns
+        
+        Args:
+            rule: Detection rule with replay detection enabled
+            message: CAN message to check
+            
+        Returns:
+            True if replay attack detected
+            False if message appears legitimate
+            
+        Implementation: Phase 2, Parameter 2
+        """
+        if not rule.check_replay:
+            return False
+        
+        can_id = message['can_id']
+        data = tuple(message['data'])  # Convert to tuple for hashing
+        timestamp = message['timestamp']
+        
+        # Create message signature (CAN ID + data)
+        signature = (can_id, data)
+        
+        # Get previous occurrence of this signature
+        sig_info = self._message_signatures[signature]
+        
+        if sig_info['data'] is not None:
+            # We've seen this exact message before
+            time_since_last = timestamp - sig_info['timestamp']
+            sig_info['count'] += 1
+            
+            # Check if replayed within suspicious time window
+            replay_threshold = rule.replay_time_threshold if rule.replay_time_threshold else 1.0
+            
+            if time_since_last < replay_threshold:
+                # Same message within suspicious time window
+                logger.debug(f"Potential replay: CAN 0x{can_id:X}, data={data}, time_delta={time_since_last:.3f}s, count={sig_info['count']}")
+                
+                # Multiple rapid replays are highly suspicious
+                if sig_info['count'] >= 3:
+                    logger.debug(f"Replay attack confirmed: {sig_info['count']} identical messages in {replay_threshold}s")
+                    return True
+                
+                # Single replay within very short time is suspicious for critical messages
+                if time_since_last < 0.1:  # 100ms threshold for exact replays
+                    logger.debug(f"Rapid replay detected: {time_since_last*1000:.1f}ms")
+                    return True
+        
+        # Update signature tracking
+        self._message_signatures[signature] = {
+            'data': data,
+            'timestamp': timestamp,
+            'count': sig_info['count']
+        }
+        
+        return False
+    
+    def _validate_data_bytes(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Validate specific data byte values.
+        
+        Checks if specified data bytes match expected values. Used for:
+        - Emergency brake override detection (specific byte patterns)
+        - Command validation (expected byte values)
+        - Safety-critical message validation
+        
+        Args:
+            rule: Detection rule with data_byte_X specifications
+            message: CAN message to validate
+            
+        Returns:
+            True if all specified bytes match expected values
+            False if any byte mismatch detected (violation)
+            
+        Implementation: Phase 2, Parameter 3
+        """
+        data = message['data']
+        
+        # Check each data byte that's specified in the rule
+        byte_checks = [
+            (0, rule.data_byte_0),
+            (1, rule.data_byte_1),
+            (2, rule.data_byte_2),
+            (3, rule.data_byte_3),
+            (4, rule.data_byte_4),
+            (5, rule.data_byte_5),
+            (6, rule.data_byte_6),
+            (7, rule.data_byte_7),
+        ]
+        
+        for byte_index, expected_value in byte_checks:
+            if expected_value is not None:
+                # Check if data has enough bytes
+                if byte_index >= len(data):
+                    logger.debug(f"Data byte {byte_index} check failed: insufficient data length {len(data)}")
+                    return False
+                
+                # Check if byte matches expected value
+                actual_value = data[byte_index]
+                if actual_value != expected_value:
+                    logger.debug(f"Data byte {byte_index} mismatch: expected=0x{expected_value:02X}, actual=0x{actual_value:02X}")
+                    return False
+        
+        return True
+    
+    # ========================================================================
+    # END PHASE 2 METHODS
+    # ========================================================================
+    
+    # ========================================================================
+    # PHASE 3 SPECIALIZED VALIDATION METHODS (Dec 2, 2025)
+    # Implementing 4 specialized rule parameters for vehicle-specific protection
+    # ========================================================================
+    
+    def _check_data_integrity(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Validate data integrity for critical safety systems.
+        
+        Checks data integrity using checksums, CRCs, or parity bits
+        for safety-critical messages (brake, steering, airbag, etc).
+        
+        Common integrity checks:
+        - XOR checksum
+        - CRC-8/CRC-16
+        - Simple parity
+        - Rolling counter validation
+        
+        Args:
+            rule: Detection rule with integrity checking enabled
+            message: CAN message to validate
+            
+        Returns:
+            True if data integrity is valid
+            False if integrity violation detected
+            
+        Implementation: Phase 3, Parameter 1
+        """
+        if not rule.check_data_integrity:
+            return True
+        
+        data = message['data']
+        
+        # Check if data has sufficient length
+        if len(data) < 2:
+            logger.debug(f"Insufficient data for integrity check: {len(data)} bytes")
+            return False
+        
+        # Determine checksum offset (default: last byte)
+        checksum_offset = rule.integrity_checksum_offset if rule.integrity_checksum_offset is not None else len(data) - 1
+        
+        if checksum_offset >= len(data):
+            logger.debug(f"Invalid checksum offset: {checksum_offset} >= {len(data)}")
+            return False
+        
+        # Extract checksum and data to validate
+        expected_checksum = data[checksum_offset]
+        data_to_check = data[:checksum_offset] + data[checksum_offset+1:]
+        
+        # Calculate XOR checksum (simple but effective)
+        calculated_checksum = 0
+        for byte in data_to_check:
+            calculated_checksum ^= byte
+        
+        # Check if checksums match
+        if calculated_checksum != expected_checksum:
+            logger.debug(f"Data integrity failure: expected=0x{expected_checksum:02X}, calculated=0x{calculated_checksum:02X}")
+            return False
+        
+        return True
+    
+    def _check_steering_range(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Validate steering angle is within safe range.
+        
+        Checks that steering angle values are within physically
+        possible and safe limits for the vehicle. Detects:
+        - Impossible steering angles (beyond vehicle capability)
+        - Dangerous steering commands
+        - Steering sensor manipulation
+        
+        Typical steering ranges:
+        - Standard vehicles: ±540° (1.5 turns)
+        - Sports vehicles: ±720° (2 turns)
+        - Trucks: ±360° (1 turn)
+        
+        Args:
+            rule: Detection rule with steering range limits
+            message: CAN message containing steering data
+            
+        Returns:
+            True if steering angle is within valid range
+            False if steering angle is out of range (violation)
+            
+        Implementation: Phase 3, Parameter 2
+        """
+        if not rule.check_steering_range:
+            return True
+        
+        if rule.steering_min is None or rule.steering_max is None:
+            return True  # Range not configured
+        
+        data = message['data']
+        
+        # Steering angle typically encoded in bytes 0-1 (16-bit value)
+        # Format: signed integer, little-endian, 0.1 degree resolution
+        if len(data) < 2:
+            logger.debug(f"Insufficient data for steering check: {len(data)} bytes")
+            return False
+        
+        # Extract 16-bit steering angle (little-endian)
+        raw_value = data[0] | (data[1] << 8)
+        
+        # Convert to signed integer
+        if raw_value & 0x8000:
+            raw_value = raw_value - 0x10000
+        
+        # Convert to degrees (0.1 degree resolution)
+        steering_angle = raw_value * 0.1
+        
+        # Check if within valid range
+        if steering_angle < rule.steering_min or steering_angle > rule.steering_max:
+            logger.debug(f"Steering angle out of range: {steering_angle:.1f}° not in [{rule.steering_min:.1f}°, {rule.steering_max:.1f}°]")
+            return False
+        
+        return True
+    
+    def _check_repetition_pattern(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Detect repetitive data patterns indicating potential attacks.
+        
+        Identifies suspicious repetitive patterns such as:
+        - Same message repeated excessively
+        - Stuck sensor values
+        - Pattern-based DoS attacks
+        - Fuzzing attempts
+        
+        Args:
+            rule: Detection rule with repetition threshold
+            message: CAN message to check
+            
+        Returns:
+            True if repetition attack detected
+            False if message pattern is normal
+            
+        Implementation: Phase 3, Parameter 3
+        """
+        if not rule.check_repetition:
+            return False
+        
+        can_id = message['can_id']
+        data = tuple(message['data'])
+        
+        # Get repetition tracking for this CAN ID
+        rep_info = self._data_repetition_counts[can_id]
+        
+        if rep_info['data'] == data:
+            # Same data as last time - increment counter
+            rep_info['count'] += 1
+        else:
+            # Different data - reset counter
+            rep_info['data'] = data
+            rep_info['count'] = 1
+        
+        # Check if repetition threshold exceeded
+        threshold = rule.repetition_threshold if rule.repetition_threshold else 10
+        
+        if rep_info['count'] > threshold:
+            logger.debug(f"Repetition attack detected: CAN 0x{can_id:X}, data={data}, count={rep_info['count']} > {threshold}")
+            return True
+        
+        return False
+    
+    def _validate_frame_type(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Validate CAN frame type (standard vs extended).
+        
+        Ensures that messages use the expected frame type.
+        Some attacks involve switching between standard and
+        extended frame formats to bypass filters.
+        
+        Frame types:
+        - Standard: 11-bit CAN ID (0x000 - 0x7FF)
+        - Extended: 29-bit CAN ID (0x00000000 - 0x1FFFFFFF)
+        
+        Args:
+            rule: Detection rule with expected frame type
+            message: CAN message to validate
+            
+        Returns:
+            True if frame type matches expectation
+            False if frame type violation detected
+            
+        Implementation: Phase 3, Parameter 4
+        """
+        if not rule.frame_type:
+            return True
+        
+        is_extended = message.get('is_extended', False)
+        can_id = message['can_id']
+        
+        # Determine expected frame type
+        expected_extended = rule.frame_type.lower() == 'extended'
+        
+        # Check if frame type matches
+        if is_extended != expected_extended:
+            frame_type_str = "extended" if is_extended else "standard"
+            expected_str = "extended" if expected_extended else "standard"
+            logger.debug(f"Frame type mismatch: CAN 0x{can_id:X} is {frame_type_str}, expected {expected_str}")
+            return False
+        
+        # Additional validation: ensure CAN ID is valid for frame type
+        if not is_extended and can_id > 0x7FF:
+            logger.debug(f"Standard frame with invalid CAN ID: 0x{can_id:X} > 0x7FF")
+            return False
+        
+        if is_extended and can_id > 0x1FFFFFFF:
+            logger.debug(f"Extended frame with invalid CAN ID: 0x{can_id:X} > 0x1FFFFFFF")
+            return False
+        
+        return True
+    
+    # ========================================================================
+    # END PHASE 3 METHODS
+    # ========================================================================
         
     def _calculate_confidence(self, rule: DetectionRule, message: Dict[str, Any]) -> float:
         """Calculate confidence score for alert (0.0 to 1.0)."""

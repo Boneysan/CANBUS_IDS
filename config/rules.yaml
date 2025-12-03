@@ -67,7 +67,7 @@ rules:
 
   - name: "Exact Message Replay"
     check_replay: true
-    replay_window: 5000  # ms - detect replays within 5 seconds
+    replay_time_threshold: 5.0  # seconds - detect replays within 5 seconds
     severity: HIGH
     description: "Exact message replay detected"
     action: alert
@@ -83,6 +83,7 @@ rules:
   - name: "Brake System Manipulation"
     can_id: 0x220
     check_data_integrity: true
+    integrity_checksum_offset: 7  # Checksum at last byte
     severity: CRITICAL
     description: "Potential brake system manipulation detected"
     action: alert
@@ -112,7 +113,8 @@ rules:
   - name: "Steering Angle Manipulation"
     can_id: 0x2A0
     check_steering_range: true
-    max_steering_angle: 540  # degrees
+    steering_min: -540.0  # degrees
+    steering_max: 540.0   # degrees
     severity: CRITICAL
     description: "Suspicious steering angle command"
     action: alert
@@ -139,7 +141,7 @@ rules:
 
   - name: "Repeated Data Pattern"
     check_repetition: true
-    max_repetitions: 10
+    repetition_threshold: 10
     severity: LOW
     description: "Excessive data pattern repetition"
     action: log
