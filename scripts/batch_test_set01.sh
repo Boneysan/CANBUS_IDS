@@ -77,7 +77,8 @@ for csv_file in "${CSV_FILES[@]}"; do
     if python "$PROJECT_DIR/scripts/comprehensive_test.py" \
         "$DATA_DIR/$csv_file" \
         --output "$OUTPUT_DIR" \
-        --rules "$RULES_FILE" 2>&1 | tee -a "$LOG_FILE"; then
+        --rules "$RULES_FILE" \
+        --enable-ml 2>&1 | tee -a "$LOG_FILE"; then
         
         END_TIME=$(date +%s)
         DURATION=$((END_TIME - START_TIME))

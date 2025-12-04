@@ -1,0 +1,74 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01/DoS-2.csv",
+    "test_date": "2025-11-30T23:25:51.765301",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 28.783740043640137,
+    "messages_processed": 311045,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 10806.27463729219,
+    "alerts_generated": 1244269,
+    "alert_rate_percent": 400.0286132231671,
+    "alerts_by_severity": {
+      "MEDIUM": 933224,
+      "LOW": 311045
+    },
+    "alerts_by_type": {
+      "Checksum Validation Failure": 311045,
+      "Counter Sequence Error": 311045,
+      "High Entropy Data": 311045,
+      "Unknown CAN ID": 311045,
+      "Seed Request Pattern": 89
+    },
+    "detection_accuracy": {
+      "true_positives": 25954,
+      "false_positives": 285091,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.08344130270539632,
+      "recall": 1.0,
+      "f1_score": 0.15403013065320667,
+      "accuracy": 0.08344130270539632
+    },
+    "latency_ms": {
+      "mean": 0.07381423648865564,
+      "median": 0.07200241088867188,
+      "min": 0.06413459777832031,
+      "max": 8.891582489013672,
+      "p95": 0.08225440979003906,
+      "p99": 0.10275840759277344
+    }
+  },
+  "system": {
+    "total_samples": 18,
+    "duration_seconds": 28.22320008277893,
+    "cpu_percent": {
+      "mean": 24.549999999999997,
+      "max": 28.1,
+      "min": 17.075
+    },
+    "cpu_percent_system": {
+      "mean": 26.733333333333334,
+      "max": 32.7,
+      "min": 24.4
+    },
+    "memory_rss_mb": {
+      "mean": 209.109375,
+      "max": 226.0078125,
+      "min": 125.03515625
+    },
+    "temperature_c": {
+      "mean": 48.188888888888904,
+      "max": 49.1,
+      "min": 47.2
+    },
+    "throttling_occurred": false
+  }
+}
