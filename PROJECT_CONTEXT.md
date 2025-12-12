@@ -3,8 +3,8 @@
 **Project:** Controller Area Network Intrusion Detection System (CAN-IDS)  
 **Platform:** Raspberry Pi 4 Model B  
 **Language:** Python 3.11.2  
-**Last Updated:** December 3, 2025  
-**Status:** 🔧 **FUNCTIONAL BUT REQUIRES OPTIMIZATION**  
+**Last Updated:** December 7, 2025  
+**Status:** 🔧 **FUNCTIONAL - OPTIMIZATION PLANS READY**  
 
 ---
 
@@ -23,16 +23,66 @@
 - High false positive rate: 81.7% (needs tuning)
 - Not ready for production deployment in real vehicles
 
-### 🎯 Immediate Goals
-1. Implement message sampling for ML (5 min, 10x speedup)
-2. Train lightweight ML model (4 hrs, 50-100x speedup)
-3. Tune rule-based detection to reduce false positives
+### 💡 Rule Tuning Strategy (December 7, 2025)
+**Current Rules:** 20 configured rules with good coverage BUT too aggressive
+- ✅ Coverage: All attack types (DoS, replay, fuzzing, ECU impersonation, etc.)
+- ✅ Performance: 759 msg/s, 100% recall (catches all attacks)
+- ⚠️ Problem: 81.7% false positives (only 18.28% precision)
+
+**Root Cause:** Rules use generic thresholds, not vehicle-specific baselines
+
+**Solution:** Extract timing/frequency parameters from ML training data
+- ML models were trained on 10.6M attack-free messages from real vehicles
+- Feature extractor already calculates per-CAN-ID statistics:
+  * `interval_mean` - Average message interval
+  * `interval_std` - Timing variance
+  * `freq_last_1s` - Message frequency
+- Can extract these baselines and auto-generate vehicle-specific rule thresholds
+- Use mean ± 3×std for thresholds (covers 99.7% of normal traffic)
+
+**Implementation:** Create script to analyze Vehicle_Models training data and output optimized `rules.yaml` with vehicle-specific timing/frequency thresholds instead of hardcoded generic values.
+
+### 🎯 Implementation Roadmap (December 7, 2025)
+
+**Two Approaches Available:**
+
+1. **Conservative (IMPROVEMENT_ROADMAP.md):** 2-4 weeks, achieves 1,500 msg/s
+   - Week 1: Fix false positives, lightweight ML, rule indexing → 750 msg/s
+   - Week 2-3: Batching, multiprocessing → 1,500 msg/s
+   - Week 4+: Production hardening
+
+2. **Aggressive (BUILD_PLAN_7000_MSG_SEC.md):** 3 days, achieves 7,000+ msg/s
+   - Day 1: Message cycle detection + rule optimization (6 hours)
+   - Day 2: ML integration (4.5 hours)
+   - Day 3: Testing (4 hours)
+   - Research-validated, hierarchical 3-stage architecture
+
+3. **Hybrid (Recommended):** Best of both
+   - Week 1: Conservative approach → Working 750 msg/s system
+   - Week 2: Test on real vehicle, measure actual traffic
+   - Week 3: If needed, add cycle detection → 7,000+ msg/s
+
+**Quick Wins Available Today:**
+- Change `n_estimators=300` to `n_estimators=5` in ml_detector.py line 124 (5 min) → 100x ML speedup
+- Add rule indexing by CAN ID in rule_engine.py (2 hours) → 3-5x rule speedup
 
 ---
 
 ## Project Structure & Key Files
 
 ### Documentation Files (Read These First)
+
+#### 🎯 Implementation Plans (December 7, 2025)
+
+| File | Purpose | Target Performance |
+|------|---------|-------------------|
+| **IMPROVEMENT_ROADMAP.md** | 4-phase optimization plan (2-4 weeks) | 750-1,500 msg/s |
+| **BUILD_PLAN_7000_MSG_SEC.md** | Complete 3-day build plan with research citations | 7,000+ msg/s |
+| **ACHIEVING_7000_MSG_PER_SEC.md** | Technical analysis & implementation guide | 7,000+ msg/s |
+| **COMPARISON_ORIGINAL_VS_7K_PLAN.md** | Compare incremental vs architectural approaches | Both options |
+| **HYBRID_APPROACH_CAPABILITIES.md** | Week-by-week capability progression | 750 → 7,000 msg/s |
+
+#### 📋 Status & Testing (December 3, 2025)
 
 | File | Purpose | Last Updated |
 |------|---------|--------------|
@@ -130,15 +180,27 @@ models/multistage/              # Pre-trained ML models
 ### ML Detection (December 3, 2025 Test)
 
 **Dataset:** DoS-1 (50,000 messages)  
-**Model:** IsolationForest (100 estimators, 9 features)
+**Model:** IsolationForest (**300 estimators**, 9 features)
 
 ```
-❌ Throughput:        15.26 msg/s (50x slower!)
+❌ Throughput:        15.26 msg/s (100x slower than needed!)
 ❌ Mean Latency:      64.089 ms (49x slower!)
 ❌ P95 Latency:       101.861 ms
    CPU Usage:         27.2% avg
    Memory:            168.9 MB avg
    Bottleneck:        99% in sklearn IsolationForest.decision_function()
+                      (loops through 300 trees per message)
+```
+
+**Why So Slow:**
+```
+Time per message = Feature extraction + (Trees × Time per tree)
+                 = 0.1ms + (300 × 0.04ms)
+                 = 12.1ms
+Theoretical max  = 1000ms / 12.1ms = 83 msg/s
+Actual observed  = 15 msg/s (with overhead)
+
+Fix: Reduce to 5 trees → 0.3ms per message → 1,500 msg/s (100x faster!)
 ```
 
 **Status:** NOT suitable for real-time, needs 50-100x speedup
@@ -275,7 +337,8 @@ if self._stats['messages_analyzed'] % self.sampling_rate != 0:
 **Steps:**
 1. Go to Vehicle_Models project on USB
 2. Run retrain script (see ML_OPTIMIZATION_GUIDE.md)
-3. Train with n_estimators=15 (down from 100)
+3. Train with n_estimators=5 (down from 300) for 100x speedup
+   OR n_estimators=15 (down from 300) for 50x speedup
 4. Copy model to CANBUS_IDS/data/models/
 5. Test and validate
 

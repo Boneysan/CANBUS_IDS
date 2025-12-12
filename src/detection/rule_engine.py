@@ -72,6 +72,11 @@ class DetectionRule:
     repetition_threshold: Optional[int] = None    # Max consecutive identical messages
     integrity_checksum_offset: Optional[int] = None # Byte offset for integrity checksum
     
+    # Adaptive Timing Parameters (Dec 9, 2025)
+    sigma_extreme: Optional[float] = None         # Sigma multiplier for extreme threshold (Tier 1)
+    sigma_moderate: Optional[float] = None        # Sigma multiplier for moderate threshold (Tier 2)
+    consecutive_required: Optional[int] = None    # Required violations for sustained detection (Tier 2)
+    
     def matches_can_id(self, can_id: int) -> bool:
         """Check if CAN ID matches rule criteria."""
         if self.can_id is not None:
@@ -412,33 +417,106 @@ class RuleEngine:
             return False
             
         freq_history = self._frequency_counters[can_id]
+        max_freq_int = int(rule.max_frequency)  # Convert to int for indexing
         
-        if len(freq_history) < rule.max_frequency:
+        if len(freq_history) < max_freq_int:
             return False
             
         # Check if we have max_frequency messages within time_window
-        time_span = freq_history[-1] - freq_history[-rule.max_frequency]
+        time_span = freq_history[-1] - freq_history[-max_freq_int]
         return time_span <= rule.time_window
         
     def _check_timing_violation(self, rule: DetectionRule, can_id: int, timestamp: float) -> bool:
-        """Check for timing anomalies."""
+        """
+        Check for timing anomalies using hybrid detection approach.
+        
+        Combines two detection tiers:
+        1. Immediate detection for extreme violations (>2-sigma from normal)
+        2. Consecutive violation detection for moderate anomalies (1-2 sigma)
+        
+        This approach minimizes false positives from natural timing jitter while
+        maintaining high sensitivity to actual attacks.
+        
+        Args:
+            rule: Detection rule with expected_interval and interval_variance (1-sigma)
+            can_id: CAN identifier
+            timestamp: Message timestamp
+            
+        Returns:
+            True if timing violation detected, False otherwise
+        """
         if not rule.expected_interval or not rule.interval_variance:
             return False
-            
+        
         timing_history = self._timing_analysis[can_id]
         
-        if len(timing_history) < 5:  # Need some history
-            return False
-            
-        # Calculate recent interval statistics
-        recent_intervals = timing_history[-10:]
-        avg_interval = statistics.mean(recent_intervals)
+        if len(timing_history) < 2:
+            return False  # Need at least 2 messages to calculate interval
         
+        current_interval = timing_history[-1]
         expected = rule.expected_interval
-        tolerance = rule.interval_variance
+        variance_1sigma = rule.interval_variance
         
-        # Check if average interval is outside expected range
-        return not (expected - tolerance <= avg_interval <= expected + tolerance)
+        # Use per-CAN-ID adaptive sigma multiplier (with fallback to default 3.0)
+        sigma_extreme = getattr(rule, 'sigma_extreme', 3.0)
+        variance_extreme = variance_1sigma * sigma_extreme
+        
+        # Tier 1: Extreme Violation Detection
+        # Detects obvious attacks (DoS flooding, severe delays)
+        # Example: 1ms intervals when normal is 10ms, or 50ms when normal is 10ms
+        # Using per-CAN-ID adaptive sigma (2.5-4.0σ based on traffic characteristics)
+        extreme_min = max(0, expected - variance_extreme)
+        extreme_max = expected + variance_extreme
+        
+        if current_interval < extreme_min:
+            # Message arrived WAY too fast (DoS, injection attack)
+            logger.debug(
+                f"CAN ID 0x{can_id:03X}: Extreme timing violation (too fast) - "
+                f"interval={current_interval:.2f}ms < {extreme_min:.2f}ms"
+            )
+            return True
+        
+        if current_interval > extreme_max:
+            # Message arrived WAY too slow (suspension, delay attack)
+            logger.debug(
+                f"CAN ID 0x{can_id:03X}: Extreme timing violation (too slow) - "
+                f"interval={current_interval:.2f}ms > {extreme_max:.2f}ms"
+            )
+            return True
+        
+        # Tier 2: Sustained Pattern Violation Detection
+        # Filters normal timing jitter by requiring sustained pattern change
+        # Using per-CAN-ID adaptive N (3-6 based on traffic rate and jitter)
+        # Uses "N out of M" approach: allows occasional normal messages during attack
+        consecutive_required = getattr(rule, 'consecutive_required', 5)
+        window_size = consecutive_required + 2  # Look at slightly larger window
+        
+        if len(timing_history) >= window_size:
+            # Apply sigma_moderate to Tier 2 (tighter than Tier 1 for subtle attacks)
+            sigma_moderate = getattr(rule, 'sigma_moderate', 1.5)
+            variance_moderate = variance_1sigma * sigma_moderate
+            moderate_min = max(0, expected - variance_moderate)
+            moderate_max = expected + variance_moderate
+            
+            recent_intervals = timing_history[-window_size:]
+            violations = 0
+            for interval in recent_intervals:
+                if interval < moderate_min or interval > moderate_max:
+                    violations += 1
+            
+            # Require N violations out of (N+2) messages
+            # Example: 5 out of 7 messages violate = sustained attack
+            # This allows 1-2 normal messages to be interspersed without breaking detection
+            if violations >= consecutive_required:
+                # Sustained pattern of violations indicates attack, not random jitter
+                logger.debug(
+                    f"CAN ID 0x{can_id:03X}: Sustained timing violations - "
+                    f"{violations}/{window_size} violations in recent window, "
+                    f"expected={expected:.2f}±{variance_moderate:.2f}ms ({sigma_extreme}σ)"
+                )
+                return True
+        
+        return False
         
     def _validate_source(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
         """Validate message source (simplified - would need ECU identification)."""

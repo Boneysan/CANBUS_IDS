@@ -1,0 +1,646 @@
+rules:
+- name: Timing Anomaly - CAN ID 0x0C1
+  can_id: 193
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 247,375 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 5.46
+  interval_variance: 9.51
+- name: High Frequency - CAN ID 0x0C1
+  can_id: 193
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 111.3 msg/s)'
+  action: alert
+  max_frequency: 445.2
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x0C5
+  can_id: 197
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 247,375 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 5.46
+  interval_variance: 9.51
+- name: High Frequency - CAN ID 0x0C5
+  can_id: 197
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 111.3 msg/s)'
+  action: alert
+  max_frequency: 445.2
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x0C9
+  can_id: 201
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 178,080 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 7.58
+  interval_variance: 9.17
+- name: High Frequency - CAN ID 0x0C9
+  can_id: 201
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 80.1 msg/s)'
+  action: alert
+  max_frequency: 320.4
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x0F1
+  can_id: 241
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 222,647 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 6.06
+  interval_variance: 9.95
+- name: High Frequency - CAN ID 0x0F1
+  can_id: 241
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 100.2 msg/s)'
+  action: alert
+  max_frequency: 400.6
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x0F9
+  can_id: 249
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 178,008 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 7.59
+  interval_variance: 11.47
+- name: High Frequency - CAN ID 0x0F9
+  can_id: 249
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 80.1 msg/s)'
+  action: alert
+  max_frequency: 320.3
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x120
+  can_id: 288
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 447 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 3025.66
+  interval_variance: 6747.8
+- name: Timing Anomaly - CAN ID 0x12A
+  can_id: 298
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,264 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.64
+  interval_variance: 76.87
+- name: High Frequency - CAN ID 0x12A
+  can_id: 298
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.0 msg/s)'
+  action: alert
+  max_frequency: 40.1
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x134
+  can_id: 308
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,264 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.64
+  interval_variance: 76.97
+- name: High Frequency - CAN ID 0x134
+  can_id: 308
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.0 msg/s)'
+  action: alert
+  max_frequency: 40.1
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x138
+  can_id: 312
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,227 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.22
+  interval_variance: 914.59
+- name: Timing Anomaly - CAN ID 0x17D
+  can_id: 381
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,488 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.04
+  interval_variance: 94.68
+- name: High Frequency - CAN ID 0x17D
+  can_id: 381
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.1 msg/s)'
+  action: alert
+  max_frequency: 40.5
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x17F
+  can_id: 383
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,488 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.04
+  interval_variance: 94.68
+- name: High Frequency - CAN ID 0x17F
+  can_id: 383
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.1 msg/s)'
+  action: alert
+  max_frequency: 40.5
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x184
+  can_id: 388
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 123,687 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 10.92
+  interval_variance: 17.42
+- name: High Frequency - CAN ID 0x184
+  can_id: 388
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 55.6 msg/s)'
+  action: alert
+  max_frequency: 222.6
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x191
+  can_id: 401
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 178,080 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 7.58
+  interval_variance: 9.19
+- name: High Frequency - CAN ID 0x191
+  can_id: 401
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 80.1 msg/s)'
+  action: alert
+  max_frequency: 320.5
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x199
+  can_id: 409
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 178,008 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 7.59
+  interval_variance: 11.48
+- name: High Frequency - CAN ID 0x199
+  can_id: 409
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 80.1 msg/s)'
+  action: alert
+  max_frequency: 320.3
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x19D
+  can_id: 413
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 89,004 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 15.17
+  interval_variance: 17.72
+- name: High Frequency - CAN ID 0x19D
+  can_id: 413
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 40.0 msg/s)'
+  action: alert
+  max_frequency: 160.2
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1A1
+  can_id: 417
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 89,041 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 15.16
+  interval_variance: 20.34
+- name: High Frequency - CAN ID 0x1A1
+  can_id: 417
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 40.1 msg/s)'
+  action: alert
+  max_frequency: 160.2
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1C3
+  can_id: 451
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 89,041 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 15.16
+  interval_variance: 20.35
+- name: High Frequency - CAN ID 0x1C3
+  can_id: 451
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 40.1 msg/s)'
+  action: alert
+  max_frequency: 160.2
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1C7
+  can_id: 455
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 123,687 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 10.92
+  interval_variance: 17.42
+- name: High Frequency - CAN ID 0x1C7
+  can_id: 455
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 55.6 msg/s)'
+  action: alert
+  max_frequency: 222.6
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1CD
+  can_id: 461
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 123,687 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 10.92
+  interval_variance: 17.42
+- name: High Frequency - CAN ID 0x1CD
+  can_id: 461
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 55.6 msg/s)'
+  action: alert
+  max_frequency: 222.6
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1E1
+  can_id: 481
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 74,216 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 18.19
+  interval_variance: 29.78
+- name: High Frequency - CAN ID 0x1E1
+  can_id: 481
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 33.4 msg/s)'
+  action: alert
+  max_frequency: 133.6
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1E5
+  can_id: 485
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 247,375 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 5.46
+  interval_variance: 9.49
+- name: High Frequency - CAN ID 0x1E5
+  can_id: 485
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 111.3 msg/s)'
+  action: alert
+  max_frequency: 445.2
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1E9
+  can_id: 489
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 123,687 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 10.92
+  interval_variance: 17.43
+- name: High Frequency - CAN ID 0x1E9
+  can_id: 489
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 55.6 msg/s)'
+  action: alert
+  max_frequency: 222.6
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1F1
+  can_id: 497
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,272 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.62
+  interval_variance: 77.55
+- name: High Frequency - CAN ID 0x1F1
+  can_id: 497
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.0 msg/s)'
+  action: alert
+  max_frequency: 40.1
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1F3
+  can_id: 499
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 70,470 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 19.16
+  interval_variance: 31.7
+- name: High Frequency - CAN ID 0x1F3
+  can_id: 499
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 31.5 msg/s)'
+  action: alert
+  max_frequency: 126.0
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x1F5
+  can_id: 501
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 89,004 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 15.17
+  interval_variance: 17.74
+- name: High Frequency - CAN ID 0x1F5
+  can_id: 501
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 40.0 msg/s)'
+  action: alert
+  max_frequency: 160.2
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x2C3
+  can_id: 707
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 44,521 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 30.33
+  interval_variance: 37.05
+- name: High Frequency - CAN ID 0x2C3
+  can_id: 707
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 20.0 msg/s)'
+  action: alert
+  max_frequency: 80.1
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x2F9
+  can_id: 761
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 46,384 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 29.11
+  interval_variance: 47.99
+- name: High Frequency - CAN ID 0x2F9
+  can_id: 761
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 20.9 msg/s)'
+  action: alert
+  max_frequency: 83.5
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x334
+  can_id: 820
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 74,212 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 18.19
+  interval_variance: 24.98
+- name: High Frequency - CAN ID 0x334
+  can_id: 820
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 33.4 msg/s)'
+  action: alert
+  max_frequency: 133.5
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x348
+  can_id: 840
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 46,384 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 29.11
+  interval_variance: 47.98
+- name: High Frequency - CAN ID 0x348
+  can_id: 840
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 20.9 msg/s)'
+  action: alert
+  max_frequency: 83.5
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x34A
+  can_id: 842
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 46,384 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 29.11
+  interval_variance: 47.98
+- name: High Frequency - CAN ID 0x34A
+  can_id: 842
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 20.9 msg/s)'
+  action: alert
+  max_frequency: 83.5
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x3C1
+  can_id: 961
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,260 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.66
+  interval_variance: 76.93
+- name: High Frequency - CAN ID 0x3C1
+  can_id: 961
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.0 msg/s)'
+  action: alert
+  max_frequency: 40.1
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x3C9
+  can_id: 969
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,265 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.64
+  interval_variance: 78.34
+- name: High Frequency - CAN ID 0x3C9
+  can_id: 969
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.0 msg/s)'
+  action: alert
+  max_frequency: 40.1
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x3D1
+  can_id: 977
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,260 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.66
+  interval_variance: 76.93
+- name: High Frequency - CAN ID 0x3D1
+  can_id: 977
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.0 msg/s)'
+  action: alert
+  max_frequency: 40.1
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x3E9
+  can_id: 1001
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,260 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.66
+  interval_variance: 76.94
+- name: High Frequency - CAN ID 0x3E9
+  can_id: 1001
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.0 msg/s)'
+  action: alert
+  max_frequency: 40.1
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x3ED
+  can_id: 1005
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 22,241 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 60.71
+  interval_variance: 68.77
+- name: High Frequency - CAN ID 0x3ED
+  can_id: 1005
+  severity: HIGH
+  description: 'Message rate exceeds baseline (normal: 10.0 msg/s)'
+  action: alert
+  max_frequency: 40.0
+  time_window: 1
+- name: Timing Anomaly - CAN ID 0x3F1
+  can_id: 1009
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 8,906 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 151.59
+  interval_variance: 324.87
+- name: Timing Anomaly - CAN ID 0x3F9
+  can_id: 1017
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 8,904 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 151.63
+  interval_variance: 324.97
+- name: Timing Anomaly - CAN ID 0x3FB
+  can_id: 1019
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 8,904 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 151.63
+  interval_variance: 324.99
+- name: Timing Anomaly - CAN ID 0x4C1
+  can_id: 1217
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 4,452 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 303.3
+  interval_variance: 310.8
+- name: Timing Anomaly - CAN ID 0x4C9
+  can_id: 1225
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 4,451 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 303.38
+  interval_variance: 310.2
+- name: Timing Anomaly - CAN ID 0x4D1
+  can_id: 1233
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 4,452 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 303.3
+  interval_variance: 310.8
+- name: Timing Anomaly - CAN ID 0x4E1
+  can_id: 1249
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,227 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.22
+  interval_variance: 915.63
+- name: Timing Anomaly - CAN ID 0x4E9
+  can_id: 1257
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,227 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.22
+  interval_variance: 914.9
+- name: Timing Anomaly - CAN ID 0x4F1
+  can_id: 1265
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,226 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.63
+  interval_variance: 872.52
+- name: Timing Anomaly - CAN ID 0x500
+  can_id: 1280
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,229 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 605.56
+  interval_variance: 857.36
+- name: Timing Anomaly - CAN ID 0x514
+  can_id: 1300
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,227 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.22
+  interval_variance: 912.98
+- name: Timing Anomaly - CAN ID 0x52A
+  can_id: 1322
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,227 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.22
+  interval_variance: 912.1
+- name: Timing Anomaly - CAN ID 0x771
+  can_id: 1905
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,227 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.22
+  interval_variance: 912.55
+- name: Timing Anomaly - CAN ID 0x772
+  can_id: 1906
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,226 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.63
+  interval_variance: 872.49
+- name: Timing Anomaly - CAN ID 0x773
+  can_id: 1907
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,229 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 605.56
+  interval_variance: 857.36
+- name: Timing Anomaly - CAN ID 0x77F
+  can_id: 1919
+  severity: MEDIUM
+  description: Message timing deviates from baseline (learned from 2,225 messages)
+  action: alert
+  check_timing: true
+  expected_interval: 606.7
+  interval_variance: 875.86
+_metadata:
+  generated_by: generate_rules_from_baseline.py
+  confidence_level: 0.997
+  sigma_multiplier: 3.0
+  baseline_message_count: 3218432
+  can_ids_analyzed: 51
