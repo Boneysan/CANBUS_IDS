@@ -28,6 +28,12 @@ capture:
   pcap_directory: data/raw/
   pcap_rotation_size: 100MB
 
+# Stage 3: Decision Tree ML Detector (Phase 3 - Option D)
+decision_tree:
+  enabled: true
+  model_path: data/models/decision_tree.pkl
+  visualization_path: data/models/decision_tree_rules.txt
+
 # ML settings
 ml_model:
   path: data/models/aggressive_load_shedding.joblib  # Optimized multi-stage pipeline

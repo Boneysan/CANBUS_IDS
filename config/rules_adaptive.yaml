@@ -1,4 +1,55 @@
 rules:
+# ========================================================================
+# FUZZING DETECTION RULES (Dec 14, 2025)
+# Fast static checks to catch obvious fuzzing before ML analysis
+# ========================================================================
+
+- name: "Invalid CAN ID Range"
+  severity: HIGH
+  description: "CAN ID outside valid range for this vehicle (fuzzing indicator)"
+  action: alert
+  check_can_id_range: true
+  min_can_id: 0x000
+  max_can_id: 0x7FF
+  priority: 2
+
+# NOTE: All-zeros payload rule removed - legitimate messages can have zero payloads
+# Fuzzing detection now relies on:
+#   1. All-ones pattern (rarer in normal traffic)
+#   2. Sequential patterns  
+#   3. High entropy (random fuzzing)
+#   4. ML detector (Stage 3) for subtle patterns
+
+- name: "Constant Payload - All Ones"
+  severity: MEDIUM
+  description: "Payload is all 0xFF (rare pattern, fuzzing indicator)"
+  action: alert
+  check_payload_pattern: true
+  pattern_types:
+    all_ones: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+  priority: 5
+
+- name: "Sequential Payload Pattern"
+  severity: MEDIUM
+  description: "Payload shows sequential pattern (0x00,0x01,0x02...) - fuzzing indicator"
+  action: alert
+  check_payload_pattern: true
+  pattern_types:
+    sequential: "sequential_check"
+  priority: 5
+
+- name: "Excessive Payload Entropy"
+  severity: MEDIUM
+  description: "Payload randomness exceeds threshold (fuzzing indicator)"
+  action: alert
+  check_entropy: true
+  min_entropy: 6.5
+  priority: 5
+
+# ========================================================================
+# TIMING-BASED DETECTION RULES (Original)
+# ========================================================================
+
 - name: Timing Anomaly - CAN ID 0x0C1 (high-traffic, high-jitter)
   can_id: 193
   severity: MEDIUM
@@ -10,7 +61,9 @@ rules:
   interval_variance: 3.17
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x0C1
   can_id: 193
   severity: HIGH
@@ -18,6 +71,7 @@ rules:
   action: alert
   max_frequency: 445.2
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x0C5 (high-traffic, high-jitter)
   can_id: 197
   severity: MEDIUM
@@ -29,7 +83,9 @@ rules:
   interval_variance: 3.17
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x0C5
   can_id: 197
   severity: HIGH
@@ -37,6 +93,7 @@ rules:
   action: alert
   max_frequency: 445.2
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x0C9 (high-traffic, low-jitter)
   can_id: 201
   severity: MEDIUM
@@ -48,7 +105,9 @@ rules:
   interval_variance: 3.06
   sigma_extreme: 2.5
   sigma_moderate: 1.3
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: High Frequency - CAN ID 0x0C9
   can_id: 201
   severity: HIGH
@@ -56,6 +115,7 @@ rules:
   action: alert
   max_frequency: 320.4
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x0F1 (high-traffic, high-jitter)
   can_id: 241
   severity: MEDIUM
@@ -67,7 +127,9 @@ rules:
   interval_variance: 3.32
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x0F1
   can_id: 241
   severity: HIGH
@@ -75,6 +137,7 @@ rules:
   action: alert
   max_frequency: 400.6
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x0F9 (high-traffic, high-jitter)
   can_id: 249
   severity: MEDIUM
@@ -86,7 +149,9 @@ rules:
   interval_variance: 3.82
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x0F9
   can_id: 249
   severity: HIGH
@@ -94,6 +159,7 @@ rules:
   action: alert
   max_frequency: 320.3
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x120 (low-traffic, high-jitter)
   can_id: 288
   severity: MEDIUM
@@ -105,7 +171,9 @@ rules:
   interval_variance: 2249.27
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x12A (medium-traffic, low-jitter)
   can_id: 298
   severity: MEDIUM
@@ -117,7 +185,9 @@ rules:
   interval_variance: 25.62
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x12A
   can_id: 298
   severity: HIGH
@@ -125,6 +195,7 @@ rules:
   action: alert
   max_frequency: 40.1
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x134 (medium-traffic, low-jitter)
   can_id: 308
   severity: MEDIUM
@@ -136,7 +207,9 @@ rules:
   interval_variance: 25.66
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x134
   can_id: 308
   severity: HIGH
@@ -144,6 +217,7 @@ rules:
   action: alert
   max_frequency: 40.1
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x138 (low-traffic, high-jitter)
   can_id: 312
   severity: MEDIUM
@@ -155,7 +229,9 @@ rules:
   interval_variance: 304.86
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x17D (medium-traffic, high-jitter)
   can_id: 381
   severity: MEDIUM
@@ -167,7 +243,9 @@ rules:
   interval_variance: 31.56
   sigma_extreme: 3.1
   sigma_moderate: 1.6
-  consecutive_required: 5
+  payload_repetition_threshold: 0.55
+  consecutive_required: 6
+  priority: 5
 - name: High Frequency - CAN ID 0x17D
   can_id: 381
   severity: HIGH
@@ -175,6 +253,7 @@ rules:
   action: alert
   max_frequency: 40.5
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x17F (medium-traffic, high-jitter)
   can_id: 383
   severity: MEDIUM
@@ -186,7 +265,9 @@ rules:
   interval_variance: 31.56
   sigma_extreme: 3.1
   sigma_moderate: 1.6
-  consecutive_required: 5
+  payload_repetition_threshold: 0.55
+  consecutive_required: 6
+  priority: 5
 - name: High Frequency - CAN ID 0x17F
   can_id: 383
   severity: HIGH
@@ -194,6 +275,7 @@ rules:
   action: alert
   max_frequency: 40.5
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x184 (high-traffic, high-jitter)
   can_id: 388
   severity: MEDIUM
@@ -205,7 +287,9 @@ rules:
   interval_variance: 5.81
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x184
   can_id: 388
   severity: HIGH
@@ -213,6 +297,7 @@ rules:
   action: alert
   max_frequency: 222.6
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x191 (high-traffic, low-jitter)
   can_id: 401
   severity: MEDIUM
@@ -224,7 +309,9 @@ rules:
   interval_variance: 3.06
   sigma_extreme: 2.5
   sigma_moderate: 1.3
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: High Frequency - CAN ID 0x191
   can_id: 401
   severity: HIGH
@@ -232,6 +319,7 @@ rules:
   action: alert
   max_frequency: 320.5
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x199 (high-traffic, high-jitter)
   can_id: 409
   severity: MEDIUM
@@ -243,7 +331,9 @@ rules:
   interval_variance: 3.83
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x199
   can_id: 409
   severity: HIGH
@@ -251,6 +341,7 @@ rules:
   action: alert
   max_frequency: 320.3
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x19D (medium-traffic, low-jitter)
   can_id: 413
   severity: MEDIUM
@@ -262,7 +353,9 @@ rules:
   interval_variance: 5.91
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x19D
   can_id: 413
   severity: HIGH
@@ -270,6 +363,7 @@ rules:
   action: alert
   max_frequency: 160.2
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1A1 (medium-traffic, low-jitter)
   can_id: 417
   severity: MEDIUM
@@ -281,7 +375,9 @@ rules:
   interval_variance: 6.78
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x1A1
   can_id: 417
   severity: HIGH
@@ -289,6 +385,7 @@ rules:
   action: alert
   max_frequency: 160.2
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1C3 (medium-traffic, low-jitter)
   can_id: 451
   severity: MEDIUM
@@ -300,7 +397,9 @@ rules:
   interval_variance: 6.78
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x1C3
   can_id: 451
   severity: HIGH
@@ -308,6 +407,7 @@ rules:
   action: alert
   max_frequency: 160.2
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1C7 (high-traffic, high-jitter)
   can_id: 455
   severity: MEDIUM
@@ -319,7 +419,9 @@ rules:
   interval_variance: 5.81
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x1C7
   can_id: 455
   severity: HIGH
@@ -327,6 +429,7 @@ rules:
   action: alert
   max_frequency: 222.6
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1CD (high-traffic, high-jitter)
   can_id: 461
   severity: MEDIUM
@@ -338,7 +441,9 @@ rules:
   interval_variance: 5.81
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x1CD
   can_id: 461
   severity: HIGH
@@ -346,6 +451,7 @@ rules:
   action: alert
   max_frequency: 222.6
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1E1 (medium-traffic, high-jitter)
   can_id: 481
   severity: MEDIUM
@@ -357,7 +463,9 @@ rules:
   interval_variance: 9.93
   sigma_extreme: 3.1
   sigma_moderate: 1.6
-  consecutive_required: 5
+  payload_repetition_threshold: 0.55
+  consecutive_required: 6
+  priority: 5
 - name: High Frequency - CAN ID 0x1E1
   can_id: 481
   severity: HIGH
@@ -365,6 +473,7 @@ rules:
   action: alert
   max_frequency: 133.6
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1E5 (high-traffic, high-jitter)
   can_id: 485
   severity: MEDIUM
@@ -376,7 +485,9 @@ rules:
   interval_variance: 3.16
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x1E5
   can_id: 485
   severity: HIGH
@@ -384,6 +495,7 @@ rules:
   action: alert
   max_frequency: 445.2
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1E9 (high-traffic, high-jitter)
   can_id: 489
   severity: MEDIUM
@@ -395,7 +507,9 @@ rules:
   interval_variance: 5.81
   sigma_extreme: 2.8
   sigma_moderate: 1.4
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x1E9
   can_id: 489
   severity: HIGH
@@ -403,6 +517,7 @@ rules:
   action: alert
   max_frequency: 222.6
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1F1 (medium-traffic, low-jitter)
   can_id: 497
   severity: MEDIUM
@@ -414,7 +529,9 @@ rules:
   interval_variance: 25.85
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x1F1
   can_id: 497
   severity: HIGH
@@ -422,6 +539,7 @@ rules:
   action: alert
   max_frequency: 40.1
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1F3 (medium-traffic, high-jitter)
   can_id: 499
   severity: MEDIUM
@@ -433,7 +551,9 @@ rules:
   interval_variance: 10.57
   sigma_extreme: 3.1
   sigma_moderate: 1.6
-  consecutive_required: 5
+  payload_repetition_threshold: 0.55
+  consecutive_required: 6
+  priority: 5
 - name: High Frequency - CAN ID 0x1F3
   can_id: 499
   severity: HIGH
@@ -441,6 +561,7 @@ rules:
   action: alert
   max_frequency: 126.0
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x1F5 (medium-traffic, low-jitter)
   can_id: 501
   severity: MEDIUM
@@ -452,7 +573,9 @@ rules:
   interval_variance: 5.91
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x1F5
   can_id: 501
   severity: HIGH
@@ -460,6 +583,7 @@ rules:
   action: alert
   max_frequency: 160.2
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x2C3 (medium-traffic, low-jitter)
   can_id: 707
   severity: MEDIUM
@@ -471,7 +595,9 @@ rules:
   interval_variance: 12.35
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x2C3
   can_id: 707
   severity: HIGH
@@ -479,6 +605,7 @@ rules:
   action: alert
   max_frequency: 80.1
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x2F9 (medium-traffic, high-jitter)
   can_id: 761
   severity: MEDIUM
@@ -490,7 +617,9 @@ rules:
   interval_variance: 16.0
   sigma_extreme: 3.1
   sigma_moderate: 1.6
-  consecutive_required: 5
+  payload_repetition_threshold: 0.55
+  consecutive_required: 6
+  priority: 5
 - name: High Frequency - CAN ID 0x2F9
   can_id: 761
   severity: HIGH
@@ -498,6 +627,7 @@ rules:
   action: alert
   max_frequency: 83.5
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x334 (medium-traffic, low-jitter)
   can_id: 820
   severity: MEDIUM
@@ -509,7 +639,9 @@ rules:
   interval_variance: 8.33
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x334
   can_id: 820
   severity: HIGH
@@ -517,6 +649,7 @@ rules:
   action: alert
   max_frequency: 133.5
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x348 (medium-traffic, high-jitter)
   can_id: 840
   severity: MEDIUM
@@ -528,7 +661,9 @@ rules:
   interval_variance: 15.99
   sigma_extreme: 3.1
   sigma_moderate: 1.6
-  consecutive_required: 5
+  payload_repetition_threshold: 0.55
+  consecutive_required: 6
+  priority: 5
 - name: High Frequency - CAN ID 0x348
   can_id: 840
   severity: HIGH
@@ -536,6 +671,7 @@ rules:
   action: alert
   max_frequency: 83.5
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x34A (medium-traffic, high-jitter)
   can_id: 842
   severity: MEDIUM
@@ -547,7 +683,9 @@ rules:
   interval_variance: 15.99
   sigma_extreme: 3.1
   sigma_moderate: 1.6
-  consecutive_required: 5
+  payload_repetition_threshold: 0.55
+  consecutive_required: 6
+  priority: 5
 - name: High Frequency - CAN ID 0x34A
   can_id: 842
   severity: HIGH
@@ -555,6 +693,7 @@ rules:
   action: alert
   max_frequency: 83.5
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x3C1 (medium-traffic, low-jitter)
   can_id: 961
   severity: MEDIUM
@@ -566,7 +705,9 @@ rules:
   interval_variance: 25.64
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x3C1
   can_id: 961
   severity: HIGH
@@ -574,6 +715,7 @@ rules:
   action: alert
   max_frequency: 40.1
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x3C9 (medium-traffic, low-jitter)
   can_id: 969
   severity: MEDIUM
@@ -585,7 +727,9 @@ rules:
   interval_variance: 26.11
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x3C9
   can_id: 969
   severity: HIGH
@@ -593,6 +737,7 @@ rules:
   action: alert
   max_frequency: 40.1
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x3D1 (medium-traffic, low-jitter)
   can_id: 977
   severity: MEDIUM
@@ -604,7 +749,9 @@ rules:
   interval_variance: 25.64
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x3D1
   can_id: 977
   severity: HIGH
@@ -612,6 +759,7 @@ rules:
   action: alert
   max_frequency: 40.1
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x3E9 (medium-traffic, low-jitter)
   can_id: 1001
   severity: MEDIUM
@@ -623,7 +771,9 @@ rules:
   interval_variance: 25.65
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x3E9
   can_id: 1001
   severity: HIGH
@@ -631,6 +781,7 @@ rules:
   action: alert
   max_frequency: 40.1
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x3ED (medium-traffic, low-jitter)
   can_id: 1005
   severity: MEDIUM
@@ -642,7 +793,9 @@ rules:
   interval_variance: 22.92
   sigma_extreme: 2.8
   sigma_moderate: 1.5
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: High Frequency - CAN ID 0x3ED
   can_id: 1005
   severity: HIGH
@@ -650,6 +803,7 @@ rules:
   action: alert
   max_frequency: 40.0
   time_window: 1
+  priority: 2
 - name: Timing Anomaly - CAN ID 0x3F1 (low-traffic, high-jitter)
   can_id: 1009
   severity: MEDIUM
@@ -661,7 +815,9 @@ rules:
   interval_variance: 108.29
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x3F9 (low-traffic, high-jitter)
   can_id: 1017
   severity: MEDIUM
@@ -673,7 +829,9 @@ rules:
   interval_variance: 108.32
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x3FB (low-traffic, high-jitter)
   can_id: 1019
   severity: MEDIUM
@@ -685,7 +843,9 @@ rules:
   interval_variance: 108.33
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x4C1 (low-traffic, low-jitter)
   can_id: 1217
   severity: MEDIUM
@@ -697,7 +857,9 @@ rules:
   interval_variance: 103.6
   sigma_extreme: 3.0
   sigma_moderate: 1.7
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x4C9 (low-traffic, low-jitter)
   can_id: 1225
   severity: MEDIUM
@@ -709,7 +871,9 @@ rules:
   interval_variance: 103.4
   sigma_extreme: 3.0
   sigma_moderate: 1.7
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x4D1 (low-traffic, low-jitter)
   can_id: 1233
   severity: MEDIUM
@@ -721,7 +885,9 @@ rules:
   interval_variance: 103.6
   sigma_extreme: 3.0
   sigma_moderate: 1.7
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x4E1 (low-traffic, high-jitter)
   can_id: 1249
   severity: MEDIUM
@@ -733,7 +899,9 @@ rules:
   interval_variance: 305.21
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x4E9 (low-traffic, high-jitter)
   can_id: 1257
   severity: MEDIUM
@@ -745,7 +913,9 @@ rules:
   interval_variance: 304.97
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x4F1 (low-traffic, low-jitter)
   can_id: 1265
   severity: MEDIUM
@@ -757,7 +927,9 @@ rules:
   interval_variance: 290.84
   sigma_extreme: 3.0
   sigma_moderate: 1.7
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x500 (low-traffic, low-jitter)
   can_id: 1280
   severity: MEDIUM
@@ -769,7 +941,9 @@ rules:
   interval_variance: 285.79
   sigma_extreme: 3.0
   sigma_moderate: 1.7
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x514 (low-traffic, high-jitter)
   can_id: 1300
   severity: MEDIUM
@@ -781,7 +955,9 @@ rules:
   interval_variance: 304.33
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x52A (low-traffic, high-jitter)
   can_id: 1322
   severity: MEDIUM
@@ -793,7 +969,9 @@ rules:
   interval_variance: 304.03
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x771 (low-traffic, high-jitter)
   can_id: 1905
   severity: MEDIUM
@@ -805,7 +983,9 @@ rules:
   interval_variance: 304.18
   sigma_extreme: 3.3
   sigma_moderate: 1.8
-  consecutive_required: 4
+  payload_repetition_threshold: 0.55
+  consecutive_required: 5
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x772 (low-traffic, low-jitter)
   can_id: 1906
   severity: MEDIUM
@@ -817,7 +997,9 @@ rules:
   interval_variance: 290.83
   sigma_extreme: 3.0
   sigma_moderate: 1.7
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x773 (low-traffic, low-jitter)
   can_id: 1907
   severity: MEDIUM
@@ -829,7 +1011,9 @@ rules:
   interval_variance: 285.79
   sigma_extreme: 3.0
   sigma_moderate: 1.7
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 - name: Timing Anomaly - CAN ID 0x77F (low-traffic, low-jitter)
   can_id: 1919
   severity: MEDIUM
@@ -841,7 +1025,9 @@ rules:
   interval_variance: 291.95
   sigma_extreme: 3.0
   sigma_moderate: 1.7
-  consecutive_required: 3
+  payload_repetition_threshold: 0.55
+  consecutive_required: 4
+  priority: 5
 _metadata:
   generated_by: generate_rules_from_baseline.py
   confidence_level: 0.997

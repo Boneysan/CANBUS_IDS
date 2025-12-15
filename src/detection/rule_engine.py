@@ -77,6 +77,28 @@ class DetectionRule:
     sigma_moderate: Optional[float] = None        # Sigma multiplier for moderate threshold (Tier 2)
     consecutive_required: Optional[int] = None    # Required violations for sustained detection (Tier 2)
     
+    # Tier 3 Payload Analysis (Dec 14, 2025)
+    payload_repetition_threshold: Optional[float] = None  # Min fraction of repeated payloads (0.0-1.0)
+    
+    # Phase 2 Early Exit Optimization (Dec 14, 2025)
+    priority: int = 5  # Rule priority (0=critical, 5=normal, 10=low) - enables early exit
+    
+    # Fuzzing Detection Parameters (Dec 14, 2025)
+    check_can_id_range: bool = False              # Validate CAN ID within allowed range
+    min_can_id: Optional[int] = None              # Minimum valid CAN ID
+    max_can_id: Optional[int] = None              # Maximum valid CAN ID
+    check_payload_pattern: bool = False           # Check for constant/sequential patterns
+    pattern_types: Optional[Dict[str, Any]] = None  # Pattern definitions
+    check_can_id_whitelist: bool = False          # Validate against known CAN IDs
+    known_ids: Optional[List[int]] = None         # List of known valid CAN IDs
+    check_dlc_validity: bool = False              # Validate DLC matches expected for CAN ID
+    expected_dlc_by_id: Optional[Dict[int, int]] = None  # {can_id: expected_dlc}
+    check_entropy: bool = False                   # Check payload entropy
+    min_entropy: Optional[float] = None           # Minimum entropy threshold (0-8.0)
+    window_size: Optional[int] = None             # Window for entropy calculation
+    check_byte_ranges: bool = False               # Validate byte values within ranges
+    byte_ranges_by_id: Optional[Dict[int, Dict[int, List[int]]]] = None  # {can_id: {byte_idx: [min, max]}}
+    
     def matches_can_id(self, can_id: int) -> bool:
         """Check if CAN ID matches rule criteria."""
         if self.can_id is not None:
@@ -119,10 +141,15 @@ class RuleEngine:
         self.rules_file = Path(rules_file)
         self.rules: List[DetectionRule] = []
         
+        # Rule indexing for O(1) lookup optimization (Dec 14, 2025)
+        self._rules_by_can_id: Dict[Optional[int], List[DetectionRule]] = {}  # {can_id: [rules]}
+        self._global_rules: List[DetectionRule] = []  # Rules without can_id filter
+        
         # State tracking for stateful rules
         self._message_history = defaultdict(deque)  # CAN ID -> recent messages
         self._frequency_counters = defaultdict(deque)  # CAN ID -> timestamps
         self._timing_analysis = defaultdict(list)  # CAN ID -> intervals
+        self._payload_history = defaultdict(deque)  # CAN ID -> payloads (Tier 3)
         self._sequence_counters = defaultdict(int)  # CAN ID -> expected counter
         
         # Phase 1 state tracking (Dec 2, 2025)
@@ -140,7 +167,9 @@ class RuleEngine:
             'messages_processed': 0,
             'alerts_generated': 0,
             'rules_matched': 0,
-            'load_time': None
+            'load_time': None,
+            'avg_rules_per_message': 0.0,  # Optimization tracking
+            'total_rule_checks': 0  # Optimization tracking
         }
         
         self.load_rules()
@@ -161,18 +190,42 @@ class RuleEngine:
             rules_data = config.get('rules', [])
             self.rules = []
             
+            # Clear existing indexes
+            self._rules_by_can_id.clear()
+            self._global_rules.clear()
+            
             for rule_data in rules_data:
                 try:
                     rule = DetectionRule(**rule_data)
                     self.rules.append(rule)
                     self._stats['rules_loaded'] += 1
+                    
+                    # Index rule for O(1) lookup optimization (Dec 14, 2025)
+                    if rule.can_id is not None:
+                        # Rule has specific CAN ID filter
+                        if rule.can_id not in self._rules_by_can_id:
+                            self._rules_by_can_id[rule.can_id] = []
+                        self._rules_by_can_id[rule.can_id].append(rule)
+                    else:
+                        # Global rule (no CAN ID filter)
+                        self._global_rules.append(rule)
+                        
                 except Exception as e:
                     logger.warning(f"Error loading rule '{rule_data.get('name', 'Unknown')}': {e}")
                     
+            # Phase 2 Early Exit Optimization: Sort rules by priority (Dec 14, 2025)
+            # Critical rules (priority 0-2) checked first, enabling early exit on alerts
+            for can_id, rules_list in self._rules_by_can_id.items():
+                rules_list.sort(key=lambda r: r.priority)
+            self._global_rules.sort(key=lambda r: r.priority)
+            
             load_time = time.time() - start_time
             self._stats['load_time'] = load_time
             
+            # Log indexing statistics
+            total_indexed = sum(len(rules) for rules in self._rules_by_can_id.values()) + len(self._global_rules)
             logger.info(f"Loaded {len(self.rules)} rules in {load_time:.3f} seconds")
+            logger.info(f"Indexed {len(self._rules_by_can_id)} CAN IDs with rules, {len(self._global_rules)} global rules")
             
         except Exception as e:
             logger.error(f"Error loading rules: {e}")
@@ -191,7 +244,7 @@ class RuleEngine:
             
     def analyze_message(self, message: Dict[str, Any]) -> List[Alert]:
         """
-        Analyze a CAN message against all loaded rules.
+        Analyze a CAN message against relevant rules using O(1) indexed lookup.
         
         Args:
             message: CAN message dictionary
@@ -205,8 +258,24 @@ class RuleEngine:
         # Update message history for stateful analysis
         self._update_message_history(message)
         
-        # Check each rule
-        for rule in self.rules:
+        # O(1) rule lookup optimization (Dec 14, 2025)
+        can_id = message['can_id']
+        relevant_rules = []
+        
+        # Get rules specific to this CAN ID
+        if can_id in self._rules_by_can_id:
+            relevant_rules.extend(self._rules_by_can_id[can_id])
+            
+        # Add global rules (no CAN ID filter)
+        relevant_rules.extend(self._global_rules)
+        
+        # Update optimization statistics
+        self._stats['total_rule_checks'] += len(relevant_rules)
+        if self._stats['messages_processed'] > 0:
+            self._stats['avg_rules_per_message'] = self._stats['total_rule_checks'] / self._stats['messages_processed']
+        
+        # Check only relevant rules (O(1) vs O(n×m) optimization)
+        for rule in relevant_rules:
             try:
                 if self._evaluate_rule(rule, message):
                     alert = Alert(
@@ -221,6 +290,11 @@ class RuleEngine:
                     alerts.append(alert)
                     self._stats['alerts_generated'] += 1
                     self._stats['rules_matched'] += 1
+                    
+                    # Phase 2 Early Exit Optimization: Exit immediately on critical alerts (Dec 14, 2025)
+                    # Critical rules (priority 0-2) indicate severe attacks - no need to check remaining rules
+                    if rule.priority <= 2:
+                        break  # Stop checking remaining rules for this message
                     
             except Exception as e:
                 logger.warning(f"Error evaluating rule '{rule.name}': {e}")
@@ -243,6 +317,32 @@ class RuleEngine:
         # CAN ID matching
         if not rule.matches_can_id(can_id):
             return False
+        
+        # Fuzzing Detection Checks (Dec 14, 2025) - Fast static checks
+        
+        # 1. CAN ID range validation
+        if rule.check_can_id_range and not self._check_can_id_range(rule, can_id):
+            return True  # CAN ID out of range
+        
+        # 2. Payload pattern detection
+        if rule.check_payload_pattern and self._check_constant_payload_pattern(rule, message):
+            return True  # Constant pattern detected
+        
+        # 3. CAN ID whitelist validation
+        if rule.check_can_id_whitelist and self._check_rare_can_id(rule, can_id):
+            return True  # Unknown/rare CAN ID
+        
+        # 4. DLC validity for CAN ID
+        if rule.check_dlc_validity and not self._check_dlc_validity(rule, can_id, message['dlc']):
+            return True  # Invalid DLC for this CAN ID
+        
+        # 5. Payload entropy analysis
+        if rule.check_entropy and self._check_excessive_entropy(rule, can_id, message['data']):
+            return True  # Excessive randomness
+        
+        # 6. Byte range validation
+        if rule.check_byte_ranges and not self._check_byte_ranges(rule, can_id, message['data']):
+            return True  # Byte value out of range
         
         # Phase 1 Critical Checks (Dec 2, 2025)
         
@@ -371,6 +471,13 @@ class RuleEngine:
             # Keep last 50 intervals
             if len(timing_history) > 50:
                 timing_history.pop(0)
+        
+        # Track payload for Tier 3 analysis (Dec 14, 2025)
+        payload = bytes(message.get('data', []))
+        payload_history = self._payload_history[can_id]
+        payload_history.append(payload)
+        if len(payload_history) > 50:
+            payload_history.popleft()
                 
     def _match_data_pattern(self, pattern: str, data: List[int]) -> bool:
         """
@@ -508,13 +615,47 @@ class RuleEngine:
             # Example: 5 out of 7 messages violate = sustained attack
             # This allows 1-2 normal messages to be interspersed without breaking detection
             if violations >= consecutive_required:
-                # Sustained pattern of violations indicates attack, not random jitter
-                logger.debug(
-                    f"CAN ID 0x{can_id:03X}: Sustained timing violations - "
-                    f"{violations}/{window_size} violations in recent window, "
-                    f"expected={expected:.2f}±{variance_moderate:.2f}ms ({sigma_extreme}σ)"
-                )
-                return True
+                # Tier 3: Payload Repetition Analysis (Dec 14, 2025)
+                # Further filter by checking if payloads are repeating
+                # Attacks repeat same payload, normal jitter varies it
+                payload_threshold = getattr(rule, 'payload_repetition_threshold', None)
+                
+                if payload_threshold is not None and len(self._payload_history[can_id]) >= window_size:
+                    # Check payload repetition in the same window
+                    recent_payloads = list(self._payload_history[can_id])[-window_size:]
+                    
+                    # Count how many payloads are identical to the most common one
+                    from collections import Counter
+                    payload_counts = Counter(recent_payloads)
+                    most_common_payload, most_common_count = payload_counts.most_common(1)[0]
+                    repetition_ratio = most_common_count / len(recent_payloads)
+                    
+                    if repetition_ratio >= payload_threshold:
+                        # High payload repetition + timing violations = attack
+                        logger.debug(
+                            f"CAN ID 0x{can_id:03X}: Attack detected (Tier 2 + Tier 3) - "
+                            f"{violations}/{window_size} timing violations, "
+                            f"{repetition_ratio:.1%} payload repetition (threshold {payload_threshold:.1%}), "
+                            f"expected={expected:.2f}±{variance_moderate:.2f}ms"
+                        )
+                        return True
+                    else:
+                        # Timing violations but varying payloads = likely normal jitter
+                        logger.debug(
+                            f"CAN ID 0x{can_id:03X}: Timing violations filtered by Tier 3 - "
+                            f"{violations}/{window_size} timing violations, but only "
+                            f"{repetition_ratio:.1%} payload repetition (< {payload_threshold:.1%}) - "
+                            f"likely normal jitter, not attack"
+                        )
+                        return False
+                else:
+                    # No Tier 3 check configured, fall back to Tier 2 only
+                    logger.debug(
+                        f"CAN ID 0x{can_id:03X}: Sustained timing violations - "
+                        f"{violations}/{window_size} violations in recent window, "
+                        f"expected={expected:.2f}±{variance_moderate:.2f}ms ({sigma_moderate}σ)"
+                    )
+                    return True
         
         return False
         
@@ -1112,6 +1253,220 @@ class RuleEngine:
     
     # ========================================================================
     # END PHASE 3 METHODS
+    # ========================================================================
+    
+    # ========================================================================
+    # FUZZING DETECTION METHODS (Dec 14, 2025)
+    # ========================================================================
+    
+    def _check_can_id_range(self, rule: DetectionRule, can_id: int) -> bool:
+        """
+        Check if CAN ID is within valid range for this vehicle.
+        
+        Fuzzing attacks often use invalid CAN IDs outside normal range.
+        Standard CAN uses 11-bit IDs (0x000-0x7FF), but vehicles
+        typically use a subset.
+        
+        Args:
+            rule: Detection rule with min_can_id and max_can_id
+            can_id: CAN ID to validate
+            
+        Returns:
+            True if CAN ID is within valid range
+            False if CAN ID is out of range (attack indicator)
+        """
+        if rule.min_can_id is None or rule.max_can_id is None:
+            return True
+        
+        if can_id < rule.min_can_id or can_id > rule.max_can_id:
+            logger.debug(f"CAN ID 0x{can_id:X} outside valid range [0x{rule.min_can_id:X}, 0x{rule.max_can_id:X}]")
+            return False
+        
+        return True
+    
+    def _check_constant_payload_pattern(self, rule: DetectionRule, message: Dict[str, Any]) -> bool:
+        """
+        Check for constant or sequential payload patterns typical of fuzzing.
+        
+        Fuzzing attacks often use:
+        - All zeros: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+        - All ones: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+        - Sequential: [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
+        
+        Args:
+            rule: Detection rule with pattern_types
+            message: CAN message with data payload
+            
+        Returns:
+            True if constant pattern detected (attack indicator)
+            False if payload appears normal
+        """
+        if not rule.pattern_types:
+            return False
+        
+        data = message['data']
+        pattern_types = rule.pattern_types
+        
+        # Check all zeros
+        if 'all_zeros' in pattern_types:
+            if all(b == 0x00 for b in data):
+                logger.debug(f"All-zeros payload detected: CAN 0x{message['can_id']:X}")
+                return True
+        
+        # Check all ones
+        if 'all_ones' in pattern_types:
+            if all(b == 0xFF for b in data):
+                logger.debug(f"All-ones payload detected: CAN 0x{message['can_id']:X}")
+                return True
+        
+        # Check sequential pattern
+        if 'sequential' in pattern_types or pattern_types.get('sequential') == 'sequential_check':
+            is_sequential = all(data[i] == (data[0] + i) % 256 for i in range(len(data)))
+            if is_sequential:
+                logger.debug(f"Sequential payload detected: CAN 0x{message['can_id']:X}, data={data}")
+                return True
+        
+        return False
+    
+    def _check_rare_can_id(self, rule: DetectionRule, can_id: int) -> bool:
+        """
+        Check if CAN ID is rarely/never seen in normal traffic.
+        
+        Uses a whitelist of known valid CAN IDs from attack-free traffic.
+        Unknown CAN IDs may indicate fuzzing or injection attacks.
+        
+        Args:
+            rule: Detection rule with known_ids whitelist
+            can_id: CAN ID to validate
+            
+        Returns:
+            True if CAN ID is unknown/rare (attack indicator)
+            False if CAN ID is in whitelist
+        """
+        if not rule.known_ids:
+            return False
+        
+        if can_id not in rule.known_ids:
+            # Track consecutive occurrences before alerting
+            consecutive_required = rule.consecutive_required or 1
+            
+            # Use simple counter for now (could enhance with deque)
+            if consecutive_required <= 1:
+                logger.debug(f"Rare CAN ID detected: 0x{can_id:X} not in whitelist")
+                return True
+        
+        return False
+    
+    def _check_dlc_validity(self, rule: DetectionRule, can_id: int, dlc: int) -> bool:
+        """
+        Check if DLC matches expected value for this CAN ID.
+        
+        Each CAN ID typically uses a fixed DLC. Fuzzing attacks
+        may send unexpected DLC values.
+        
+        Args:
+            rule: Detection rule with expected_dlc_by_id mapping
+            can_id: CAN ID
+            dlc: Data Length Code
+            
+        Returns:
+            True if DLC is valid for this CAN ID
+            False if DLC is unexpected (attack indicator)
+        """
+        if not rule.expected_dlc_by_id:
+            return True
+        
+        expected_dlc = rule.expected_dlc_by_id.get(can_id)
+        if expected_dlc is None:
+            return True  # No expectation for this CAN ID
+        
+        if dlc != expected_dlc:
+            logger.debug(f"Invalid DLC for CAN 0x{can_id:X}: got {dlc}, expected {expected_dlc}")
+            return False
+        
+        return True
+    
+    def _check_excessive_entropy(self, rule: DetectionRule, can_id: int, data: List[int]) -> bool:
+        """
+        Check if payload entropy exceeds threshold (randomness indicator).
+        
+        Fuzzing attacks generate high-entropy random payloads.
+        Normal CAN messages have structured, low-entropy data.
+        
+        Uses Shannon entropy: H = -sum(p(x) * log2(p(x)))
+        Max entropy for 8 bytes = 8.0 (perfectly random)
+        
+        Args:
+            rule: Detection rule with min_entropy threshold
+            can_id: CAN ID
+            data: Payload bytes
+            
+        Returns:
+            True if entropy exceeds threshold (attack indicator)
+            False if entropy is normal
+        """
+        if rule.min_entropy is None:
+            return False
+        
+        # Calculate Shannon entropy
+        if not data or len(data) == 0:
+            return False
+        
+        # Count byte frequencies
+        freq = [0] * 256
+        for byte in data:
+            freq[byte] += 1
+        
+        # Calculate entropy
+        entropy = 0.0
+        total = len(data)
+        for count in freq:
+            if count > 0:
+                p = count / total
+                entropy -= p * math.log2(p)
+        
+        if entropy > rule.min_entropy:
+            logger.debug(f"Excessive entropy detected: CAN 0x{can_id:X}, entropy={entropy:.2f} > {rule.min_entropy}")
+            return True
+        
+        return False
+    
+    def _check_byte_ranges(self, rule: DetectionRule, can_id: int, data: List[int]) -> bool:
+        """
+        Check if data bytes are within expected ranges for this CAN ID.
+        
+        Each CAN ID has typical value ranges for each byte position.
+        Fuzzing attacks generate out-of-range values.
+        
+        Args:
+            rule: Detection rule with byte_ranges_by_id mapping
+            can_id: CAN ID
+            data: Payload bytes
+            
+        Returns:
+            True if all bytes are within expected ranges
+            False if any byte is out of range (attack indicator)
+        """
+        if not rule.byte_ranges_by_id:
+            return True
+        
+        byte_ranges = rule.byte_ranges_by_id.get(can_id)
+        if not byte_ranges:
+            return True  # No ranges defined for this CAN ID
+        
+        for byte_idx, (min_val, max_val) in byte_ranges.items():
+            if byte_idx >= len(data):
+                continue
+            
+            byte_val = data[byte_idx]
+            if byte_val < min_val or byte_val > max_val:
+                logger.debug(f"Byte out of range: CAN 0x{can_id:X}, byte[{byte_idx}]={byte_val} not in [{min_val}, {max_val}]")
+                return False
+        
+        return True
+    
+    # ========================================================================
+    # END FUZZING DETECTION METHODS
     # ========================================================================
         
     def _calculate_confidence(self, rule: DetectionRule, message: Dict[str, Any]) -> float:

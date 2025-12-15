@@ -1,0 +1,63 @@
+# Payload-Based Detection Rules for Fuzzing Attacks
+# Add these to config/rules_adaptive.yaml
+
+# Fuzzing Detection Rules
+- name: "Invalid CAN ID Range"
+  severity: HIGH
+  description: "CAN ID outside valid range for this vehicle"
+  action: alert
+  check_can_id_range: true
+  min_can_id: 0x000
+  max_can_id: 0x7FF  # Standard CAN (adjust for your vehicle)
+  priority: 2
+
+- name: "Constant Payload Pattern"
+  severity: MEDIUM
+  description: "Payload shows non-random constant pattern (fuzzing indicator)"
+  action: alert
+  check_payload_pattern: true
+  pattern_types:
+    - all_zeros: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    - all_ones: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+    - sequential: "sequential_check"
+  priority: 5
+
+- name: "Rare CAN ID"
+  severity: MEDIUM
+  description: "CAN ID rarely/never seen in normal traffic"
+  action: alert
+  check_can_id_whitelist: true
+  known_ids: []  # Populate from attack-free traffic analysis
+  consecutive_required: 3
+  priority: 5
+
+- name: "Invalid DLC for CAN ID"
+  severity: HIGH
+  description: "Data length inconsistent with known protocol for this ID"
+  action: alert
+  check_dlc_validity: true
+  expected_dlc_by_id:
+    # Populate from attack-free traffic: CAN_ID: expected_DLC
+    0x0C1: 8
+    0x0C5: 8
+    0x0F1: 8
+  priority: 2
+
+- name: "Excessive Payload Entropy"
+  severity: MEDIUM
+  description: "Payload randomness suggests fuzzing"
+  action: alert
+  check_entropy: true
+  min_entropy: 6.5  # Out of 8.0 max (very random)
+  window_size: 10
+  priority: 5
+
+- name: "Payload Value Out of Range"
+  severity: MEDIUM  
+  description: "Data bytes exceed typical ranges for this CAN ID"
+  action: alert
+  check_byte_ranges: true
+  byte_ranges_by_id:
+    # Example: CAN_ID: {byte_index: [min, max]}
+    0x0C1: {0: [0, 100], 1: [0, 200]}
+  priority: 5

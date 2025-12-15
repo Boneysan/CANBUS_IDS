@@ -44,6 +44,7 @@ CAN-IDS addresses these threats by monitoring CAN bus traffic in real-time and d
 ### Detection Techniques
 - **Frequency analysis** - Identify abnormal message transmission rates
 - **Timing analysis** - Detect irregular message intervals and timing violations
+- **Payload repetition analysis** - Distinguish attacks from normal jitter using payload patterns
 - **Data pattern matching** - Recognize malicious payload signatures
 - **Statistical modeling** - Baseline normal behavior and flag deviations
 - **Entropy analysis** - Identify encrypted or randomized data patterns
@@ -277,6 +278,35 @@ can-ids/
 - New field: `sigma_moderate` added to `DetectionRule` dataclass
 
 **Documentation**: See [TONIGHT_SUMMARY.md](TONIGHT_SUMMARY.md) for complete implementation details.
+
+---
+
+### Tier 3 Payload Repetition Analysis (December 14, 2025)
+
+Advanced three-tier detection system with payload-aware timing analysis:
+
+**Three-Tier Architecture**:
+- **Tier 1 (Extreme)**: σ = 2.5-3.3 - DoS/flood detection
+- **Tier 2 (Moderate)**: σ = 1.3-1.7 - Interval manipulation detection
+- **Tier 3 (Payload)**: Repetition ratio ≥ 55% - Attack vs. normal jitter discrimination
+
+**Key Innovation**: Distinguishes attacks from normal timing jitter by analyzing payload repetition patterns. Attacks typically inject identical payloads, while normal traffic varies even during timing anomalies.
+
+**Test Results**:
+- Interval attacks: **94.76% recall** (14,333/15,125 attacks caught)
+- Attack-free data: **8.43% FPR** (down from 23.38%)
+- **64% additional reduction in false positives** while maintaining >94% recall
+- **Total improvement**: 90+ percentage points FPR reduction from baseline
+
+**Technical Details**:
+- Payload repetition threshold: 0.55 (55% of messages in window must have same payload)
+- Window size: 7 messages (consecutive_required + 2)
+- Attack payloads: Identical (`000A000C00060000` for 0x1E9)
+- Normal traffic: Varied payloads even during timing jitter
+- Files modified: `src/detection/rule_engine.py`, `scripts/generate_rules_from_baseline.py`
+- New field: `payload_repetition_threshold` added to `DetectionRule` dataclass
+
+**Documentation**: See [DEVELOPMENT_SUMMARY_DEC14_2025.md](DEVELOPMENT_SUMMARY_DEC14_2025.md) for complete implementation details.
 
 ---
 

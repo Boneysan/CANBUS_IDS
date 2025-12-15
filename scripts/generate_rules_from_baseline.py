@@ -291,21 +291,21 @@ class BaselineAnalyzer:
                 traffic_category = "high-traffic"
                 sigma_extreme_base = 2.5  # Tier 1: Very loose for DoS/flood detection
                 sigma_moderate_base = 1.3  # Tier 2: Tight for interval manipulation
-                consecutive_base = 3
+                consecutive_base = 4  # Increased from 3 to reduce FPR
             elif frequency > 10:
                 # Medium-traffic CAN IDs (10-50 msg/s)
                 # Balance detection and FPR for medium traffic
                 traffic_category = "medium-traffic"
                 sigma_extreme_base = 2.8  # Tier 1: Loose for extreme violations
                 sigma_moderate_base = 1.5  # Tier 2: Moderate for sustained attacks
-                consecutive_base = 4
+                consecutive_base = 5  # Increased from 4 to reduce FPR
             else:
                 # Low-traffic CAN IDs (<10 msg/s)
                 # Higher tolerance due to sparse sampling
                 traffic_category = "low-traffic"
                 sigma_extreme_base = 3.0  # Tier 1: Very loose
                 sigma_moderate_base = 1.7  # Tier 2: Moderate tolerance
-                consecutive_base = 3
+                consecutive_base = 4  # Increased from 3 to reduce FPR
             
             # Adjust for high natural jitter (coefficient of variation)
             if cv > 0.5:
@@ -342,6 +342,7 @@ class BaselineAnalyzer:
                 'interval_variance': round(max(interval_variance_1sigma, 2.0), 2),  # 1-sigma, minimum 2ms
                 'sigma_extreme': round(sigma_extreme, 1),  # Tier 1: Multiplier for extreme threshold
                 'sigma_moderate': round(sigma_moderate, 1),  # Tier 2: Multiplier for moderate threshold
+                'payload_repetition_threshold': 0.55,  # Tier 3: Min fraction of repeated payloads (0.0-1.0)
                 'consecutive_required': consecutive_required,  # N for consecutive violations
             }
             

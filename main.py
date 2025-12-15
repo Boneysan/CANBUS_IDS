@@ -37,6 +37,7 @@ try:
     from src.capture.pcap_reader import PCAPReader, CANDumpReader
     from src.detection.rule_engine import RuleEngine
     from src.detection.ml_detector import MLDetector
+    from src.detection.decision_tree_detector import DecisionTreeDetector
     from src.preprocessing.feature_extractor import FeatureExtractor
     from src.preprocessing.normalizer import Normalizer
     from src.alerts.alert_manager import AlertManager
@@ -70,6 +71,7 @@ class CANIDSApplication:
         self.pcap_reader: Optional[PCAPReader] = None
         self.rule_engine: Optional[RuleEngine] = None
         self.ml_detector: Optional[MLDetector] = None
+        self.decision_tree_detector: Optional[DecisionTreeDetector] = None
         self.feature_extractor: Optional[FeatureExtractor] = None
         self.normalizer: Optional[Normalizer] = None
         self.alert_manager: Optional[AlertManager] = None
@@ -182,7 +184,43 @@ class CANIDSApplication:
                     # If ML was explicitly marked as required, this is critical
                     if ml_config.get('required', False):
                         raise RuntimeError("ML detection is required but failed to initialize")
+            Initialize Decision Tree detector (Phase 3 - Stage 3)
+            dt_config = self.config.get('decision_tree', {})
+            if dt_config.get('enabled', False):
+                dt_model_path = dt_config.get('model_path', 'data/models/decision_tree.pkl')
+                
+                logger.info("=" * 60)
+                logger.info("INITIALIZING STAGE 3: DECISION TREE ML DETECTOR")
+                logger.info("=" * 60)
+                
+                try:
+                    # Create decision tree detector
+                    self.decision_tree_detector = DecisionTreeDetector(model_path=dt_model_path)
+                    
+                    # Verify model loaded
+                    if not self.decision_tree_detector.is_trained:
+                        raise RuntimeError("Decision tree model not trained!")
+                    
+                    dt_stats = self.decision_tree_detector.get_stats()
+                    
+                    logger.info("✅ STAGE 3 ML DETECTION ENABLED")
+                    logger.info(f"   Model: {Path(dt_model_path).name}")
+                    logger.info(f"   Algorithm: Decision Tree Classifier")
+                    logger.info(f"   Tree Depth: {dt_stats.get('tree_depth', 'N/A')}")
+                    logger.info(f"   Tree Leaves: {dt_stats.get('tree_leaves', 'N/A')}")
+                    logger.info(f"   Expected Throughput: 8,000+ msg/s")
+                    logger.info("=" * 60)
+                    
+                except Exception as e:
+                    logger.error("=" * 60)
+                    logger.error("❌ STAGE 3 ML DETECTION INITIALIZATION FAILED")
+                    logger.error(f"   Error: {e}")
+                    logger.error("   Stage 3 will be DISABLED for this session")
+                    logger.error("   Stages 1+2 (timing + rules) will remain active")
+                    logger.error("=" * 60)
+                    self.decision_tree_detector = None
             
+            # 
             # Note: FeatureExtractor removed - ML detector handles its own feature extraction internally
                 
             logger.info("All components initialized successfully")
@@ -311,6 +349,44 @@ class CANIDSApplication:
                     self.alert_manager.process_alert(alert_data)
                     self.stats['alerts_generated'] += 1
                     
+            # Stage 3: Decision Tree ML detection (processes pre-filtered traffic)
+            if self.decision_tree_detector:
+                try:
+                    dt_alert = self.decision_tree_detector.analyze_message(message)
+                    
+                    if dt_alert:
+                        # Format feature importance for display
+                        top_features = sorted(
+                            dt_alert.feature_importance.items(),
+                            key=lambda x: x[1],
+                            reverse=True
+                        )[:3]
+                        feature_str = ", ".join([f"{k}: {v:.3f}" for k, v in top_features])
+                        
+                        alert_data = {
+                            'timestamp': dt_alert.timestamp,
+                            'rule_name': 'Stage 3: Decision Tree ML',
+                            'severity': 'HIGH',  # Stage 3 findings are significant
+                            'description': dt_alert.reason,
+                            'can_id': dt_alert.can_id,
+                            'message_data': dt_alert.message_data,
+                            'confidence': dt_alert.confidence,
+                            'source': 'decision_tree_ml',
+                            'additional_info': {
+                                'anomaly_score': dt_alert.anomaly_score,
+                                'features': dt_alert.features,
+                                'feature_importance': dt_alert.feature_importance,
+                                'top_features': feature_str
+                            }
+                        }
+                        
+                        self.alert_manager.process_alert(alert_data)
+                        self.stats['alerts_generated'] += 1
+                        
+                except Exception as e:
+                    # Log errors but don't crash the system
+                    logger.debug(f"Stage 3 ML error for message ID 0x{message['can_id']:03X}: {e}")
+            
             # ML-based detection (ML detector handles its own feature extraction internally)
             if self.ml_detector:
                 try:
@@ -375,6 +451,17 @@ class CANIDSApplication:
             print(f"  Rules loaded: {rule_stats['rules_loaded']}")
             print(f"  Rules matched: {rule_stats['rules_matched']}")
             
+        if self.decision_tree_detector:
+            dt_stats = self.decision_tree_detector.get_stats()
+            print(f"\nStage 3 Decision Tree ML:")
+            print(f"  Model loaded: {self.decision_tree_detector.is_trained}")
+            print(f"  Messages analyzed: {dt_stats['messages_analyzed']}")
+            print(f"  Anomalies detected: {dt_stats['anomalies_detected']}")
+            print(f"  Avg inference time: {dt_stats['avg_inference_time_ms']:.3f} ms")
+            if dt_stats['messages_analyzed'] > 0:
+                throughput = 1000.0 / dt_stats['avg_inference_time_ms'] if dt_stats['avg_inference_time_ms'] > 0 else 0
+                print(f"  Throughput: {throughput:,.0f} msg/s")
+        
         if self.ml_detector:
             ml_stats = self.ml_detector.get_statistics()
             print(f"\nML Detector:")
