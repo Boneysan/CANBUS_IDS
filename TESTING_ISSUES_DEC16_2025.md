@@ -1,21 +1,96 @@
 # Testing Issues Report - December 16, 2025
 
 **Date:** December 16, 2025  
-**Test Session:** Comprehensive Performance Testing  
+**Test Session:** Comprehensive Performance Testing (Initial + Retests with Models)  
 **Tester:** Automated testing suite  
 **System:** Raspberry Pi 4 Model B, Raspberry Pi OS Bookworm, Python 3.11.2
 
 ---
 
-## Executive Summary
+## 🔄 UPDATE: Retest Results After Model Installation (23:15 - 23:36)
+
+After copying ML models from USB drive (Memorex USB) and creating path symlinks, all 4 tests were re-run. **Critical finding: 100% false positive rate on attack-free data.**
+
+### ✅ Retest 1: Rules-Only Detection - SUCCESS
+- **Throughput:** 757 msg/s (consistent with initial 708 msg/s)
+- **Recall:** 100% (all attacks detected)
+- **False Positive Rate:** 90% (81,030 FP / 90,169 messages)
+- **Alert Rate:** 300% (3 alerts per message)
+- **CPU:** 25% avg, **Memory:** 189 MB, **Temp:** 50°C
+- **Status:** ✅ Functional but aggressive rules causing high FP rate
+
+### ⚠️ Retest 2: ML-Enabled Detection - DEGRADED PERFORMANCE
+- **Throughput:** 17.31 msg/s (**44x slower than rules-only!**)
+- **Recall:** 100% (all attacks detected)
+- **Alert Rate:** 400% (361,218 alerts on 90K messages)
+- **CPU:** 29% avg (114% peak!), **Memory:** 193 MB, **Temp:** 51°C
+- **Processing Time:** 5,210 seconds (~87 minutes for 90K messages)
+- **Latency:** 57.7ms avg (vs 1.3ms rules-only)
+- **Status:** ⚠️ Functional but **44x performance degradation** with ML enabled
+
+### ⚠️ Retest 3: Multi-Stage Pipeline - PARTIAL FAILURE
+- **Errors:** Module 'improved_detectors' not found, 'can_id' key errors
+- **Models:** 3 of 4 found after creating `data/models/multistage/` subdirectory
+- **Status:** ⚠️ Runs in fallback mode but ML components non-functional
+
+### ❌ Retest 4: Full Pipeline - FALSE POSITIVE DISASTER
+
+**CRITICAL FINDING: 100% False Positive Rate on Attack-Free Data**
+
+```
+Attack Detection (DoS-1):     8,839/10,000  (88.4%)   ✅ Good
+Attack Detection (DoS-2):    10,000/10,000 (100.0%)   ✅ Excellent
+Normal Traffic (Set 1):      10,000/10,000 (100.0%)   ❌ HIGH FPR
+Normal Traffic (Set 2):      10,000/10,000 (100.0%)   ❌ HIGH FPR
+
+Total messages processed: 40,000
+Stage 2 detections (rules): 38,839
+Stage 3 detections (ML): 0  ← ALL ML MODELS SHOWING "NOT TRAINED" ERRORS!
+```
+
+**Throughput:** 2,889 - 13,385 msg/s (varies by dataset)
+
+**Root Cause Analysis:**
+1. **ML Models Not Loading:** All detector classes showing "Model not trained. Cannot make predictions" despite 23 models present in data/models/
+2. **100% FP Rate:** Rules flagging ALL normal traffic as attacks (38,839/40,000 messages)
+3. **ML Stage Bypassed:** 0 detections from Stage 3, only rules firing
+4. **Aggressive Rules:** Generic rules (`config/rules.yaml`) not vehicle-specific
+
+**Critical Issues:**
+- ⚠️ **Models exist but not initialized** - initialization logic broken in detector classes
+- ❌ **100% false positive rate** - system unusable in production
+- ❌ **ML completely non-functional** - 0 ML detections across all tests
+- ⚠️ **Need adaptive rules** - switch to `config/rules_adaptive.yaml` (should achieve 8.43% FP)
+
+### Models Status After USB Copy
+**Copied from Memorex USB:**
+- ✅ `adaptive_load_shedding.joblib` (1.3MB) - Loads successfully
+- ✅ `improved_svm_high_recall.joblib` (900KB) - Loads successfully  
+- ⚠️ `hybrid_crosscheck_optimized.joblib` (965KB) - Dependency error: "No module named 'hybrid_detector'"
+
+**Symlinks Created:**
+- `models -> data/models` (fixes multi-stage path)
+- `~/Documents/GitHub/Vehicle_Models -> /media/boneysan/Data/GitHub/Vehicle_Models` (fixes relative paths)
+
+**Total Models:** 23 models in data/models/ (1.4GB), but **detector classes not loading them properly**
+
+---
+
+## Executive Summary (Initial Tests: 21:00 - 21:10)
 
 Attempted to run 4 comprehensive test suites as documented in the updated RASPBERRY_PI_DEPLOYMENT_GUIDE.md. **Test 1 (Rule-based detection) was successful**, but Tests 2-4 failed due to missing ML models and incorrect path configurations.
 
-**Overall Status:**
+**Overall Status (Initial Tests):**
 - ✅ Rule-based detection: **FULLY FUNCTIONAL** (708 msg/s, 100% recall)
 - ❌ ML-based detection: **NOT FUNCTIONAL** (models not trained/missing)
 - ❌ Multi-stage pipeline: **NOT FUNCTIONAL** (requires ML models)
 - ❌ Full integration: **NOT FUNCTIONAL** (path configuration issues)
+
+**Overall Status (After Retests with Models):**
+- ✅ Rule-based detection: **FUNCTIONAL BUT AGGRESSIVE** (757 msg/s, 90% FP rate)
+- ❌ ML-based detection: **CRITICALLY SLOW** (17.31 msg/s, 44x slower)
+- ⚠️ Multi-stage pipeline: **PARTIALLY FUNCTIONAL** (fallback mode only)
+- ❌ Full integration: **100% FALSE POSITIVE RATE** - system unusable
 
 ---
 
