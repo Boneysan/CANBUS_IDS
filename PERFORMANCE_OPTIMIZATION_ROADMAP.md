@@ -1,10 +1,11 @@
 # Performance Optimization Roadmap - Path to 7,000 msg/s
 
 **Target:** 7,000 messages per second (heavy CAN bus network)  
-**Current:** 708 msg/s (baseline from DoS-1 test)  
-**Gap:** 10x improvement needed  
-**Status:** Research-validated path to target  
-**Timeline:** 2-3 weeks for full implementation
+**Current (Ubuntu/x86):** 539,337 msg/s with pre-filter ✅  
+**Current (Raspberry Pi 4):** 757 msg/s rules-only (pre-filter NOT TESTED on Pi yet)  
+**Gap on Pi:** 9.2x improvement needed  
+**Status:** Pre-filter validation on Pi hardware required  
+**Timeline:** 1-2 weeks for Pi deployment
 
 ---
 
@@ -12,22 +13,44 @@
 
 This roadmap implements 5 research-backed optimizations to achieve 7,000 msg/s throughput:
 
-| Optimization | Expected Gain | Implementation Time | Priority |
-|--------------|---------------|---------------------|----------|
-| 1. Batch Processing | 5-10x | 4 hours | CRITICAL |
-| 2. Fast Pre-Filter | 2-3x | 2 hours | CRITICAL |
-| 3. Rule Optimization | 5-10x | 3 hours | HIGH |
-| 4. Feature Reduction (PCA) | 3-5x ML | 4 hours | HIGH |
-| 5. Multicore Processing | 2-3x | 8 hours | MEDIUM |
+| Optimization | Expected Gain | Ubuntu/x86 | Pi 4 Actual | Implementation Time | Priority | Status |
+|--------------|---------------|------------|-------------|---------------------|----------|--------
+| 1. Batch Processing | 5-10x | **3.8x** | Not measured | 4 hours | CRITICAL | ✅ **DONE** |
+| 2. Fast Pre-Filter | 2-3x | **115.86x*** | **NOT TESTED** | 2 hours | CRITICAL | ⚠️ **NEEDS PI TEST** |
+| 3. Rule Optimization + Adaptive Rules | 1.5-2x | TBD | TBD | 3 hours | **CRITICAL** | 📋 **REQUIRED** |
+| 4. Feature Reduction (PCA) | 1.2-1.5x ML | TBD | TBD | 4 hours | HIGH | 📋 **REQUIRED** |
+| 5. Multicore Processing | 1.5-2x | TBD | TBD | 8 hours | MEDIUM | 📋 Optional |
 
-**Cumulative Performance Progression:**
+*With real vehicle data (99.9% filtered) on Ubuntu/x86. **Pre-filter NOT validated on Raspberry Pi hardware yet.**
+
+**Performance Results by Platform:**
 ```
-Current:              708 msg/s   (baseline)
-+ Batch Processing:   3,540 msg/s (Week 1)
-+ Fast Pre-Filter:    7,080 msg/s (Week 1) ✅ TARGET ACHIEVED!
-+ Rule Optimization:  10,620 msg/s (Week 2) 🚀 Safety margin
-+ Multicore:          15,930 msg/s (Week 3) 🚀 2x headroom
+Ubuntu/x86 (Development):
+  Baseline:             708 msg/s     
+  + Batch Processing:   2,715 msg/s   (3.8x) ✅
+  + Fast Pre-Filter:    539,337 msg/s (115.86x!) ✅ TARGET EXCEEDED
+
+Raspberry Pi 4 (Production Target):
+  Rules-only:           757 msg/s     ✅ Measured Dec 16
+  + Pre-Filter:         ??? msg/s     ⚠️ NOT TESTED YET
+  + Adaptive Rules:     TBD           📋 REQUIRED (fixes 100% FP rate)
+  + PCA Features:       TBD           📋 REQUIRED (ML is 44x slower)
+  
+  Target: 7,000 msg/s (9.2x improvement still needed on Pi)
+  Current Gap: Pre-filter must be validated on Pi hardware
 ```
+
+**Key Findings:** 
+- ✅ Pre-filter achieves **99.9% pass rate** on Ubuntu/x86 with real vehicle data
+- ⚠️ **Pre-filter NOT tested on Raspberry Pi 4 yet** - this is critical next step
+- ❌ Pi 4 shows **100% false positive rate** with generic rules (need adaptive rules)
+- ❌ ML detection is **44x slower** on Pi 4 (17.31 msg/s) - PCA features required
+
+**Test Results:** 
+- Batch Processing: [BATCH_PROCESSING_TEST_RESULTS.md](BATCH_PROCESSING_TEST_RESULTS.md)
+- Pre-Filter (Ubuntu): [PREFILTER_IMPLEMENTATION_SUMMARY.md](PREFILTER_IMPLEMENTATION_SUMMARY.md)
+- **Pi 4 Testing**: [TESTING_ISSUES_DEC16_2025.md](TESTING_ISSUES_DEC16_2025.md) ⚠️ **CRITICAL**
+- Real Data Test: `scripts/test_prefilter_real.py`
 
 ---
 
@@ -668,18 +691,25 @@ python main.py -i vcan0 --log-level INFO
 
 ---
 
-## Phase 2: Safety Margin & Optimization (Week 2)
+## Phase 2: Critical Pi Optimizations (Week 2) - **REQUIRED FOR 7K TARGET**
 
-**Goal:** Exceed 7K target with safety margin (10K-15K msg/s)  
-**Timeline:** 8-10 hours implementation + testing
+**Goal:** Achieve 7,000 msg/s on Raspberry Pi 4 hardware  
+**Timeline:** 8-10 hours implementation + testing  
+**Status:** ⚠️ **Phase 2 is REQUIRED, not optional** - Pi 4 testing revealed critical issues:
+- 100% false positive rate with generic rules
+- ML detection 44x slower than rules-only
+- Pre-filter not yet tested on Pi hardware
 
-### Milestone 2.1: Rule Optimization with Priority (3 hours)
+### Milestone 2.1: Rule Optimization + Switch to Adaptive Rules (3 hours) ⚠️ **CRITICAL**
 
-**Research Basis:** All papers emphasize reduced rule complexity
+**Research Basis:** All papers emphasize reduced rule complexity  
+**Pi Test Finding:** Generic rules cause **100% false positive rate** on normal traffic (38,839/40,000 messages flagged)  
+**Required Fix:** Switch to `config/rules_adaptive.yaml` and implement rule indexing
 
 **Files to Modify:**
-1. `src/detection/rule_engine.py`
-2. `config/rules.yaml`
+1. `src/detection/rule_engine.py` (add priority-based early exit)
+2. `config/can_ids.yaml` (change default to rules_adaptive.yaml)
+3. Test on Pi 4 with adaptive rules
 
 #### Step 2.1.1: Implement Priority-Based Early Exit (2 hours)
 
@@ -846,14 +876,18 @@ rules:
 
 ---
 
-### Milestone 2.2: Feature Reduction with PCA (4 hours)
+### Milestone 2.2: Feature Reduction with PCA (4 hours) ⚠️ **CRITICAL FOR ML**
 
-**Research Basis:** IJRASET 2025 paper on SVM+PCA for Pi
+**Research Basis:** IJRASET 2025 paper on SVM+PCA for Pi  
+**Pi Test Finding:** ML detection achieves only **17.31 msg/s** (44x slower than rules-only!)  
+**Root Cause:** Full 58-feature ML models too heavy for Pi 4 ARM processor  
+**Required Fix:** Reduce to 10-15 features using PCA to achieve 3-5x ML speedup
 
 **Files to Create/Modify:**
 1. `src/preprocessing/feature_reduction.py` (NEW)
 2. `src/detection/ml_detector.py`
 3. Training scripts
+4. **Test on Pi 4 to validate ML performance improvement**
 
 #### Step 2.2.1: Create PCA Feature Reducer (2 hours)
 
@@ -1566,14 +1600,21 @@ vcgencmd get_throttled
 
 ### Expected Performance Progression
 
-| Milestone | Throughput (msg/s) | Gain | Cumulative | Status |
-|-----------|-------------------|------|------------|--------|
-| Baseline | 708 | 1x | 1x | ✅ Current |
-| 1.1: Batch Processing | 3,500 | 5x | 5x | Phase 1 |
-| 1.2: Pre-Filter | 7,000 | 2x | 10x | **TARGET MET** |
-| 2.1: Rule Optimization | 10,500 | 1.5x | 15x | Phase 2 |
-| 2.2: PCA Features | 12,000 | 1.2x | 17x | Phase 2 |
-| 3.1: Multicore | 18,000 | 1.5x | 25x | Phase 3 |
+**Ubuntu/x86 (Development Platform):**
+| Milestone | Throughput (msg/s) | Gain | Status |
+|-----------|-------------------|------|--------|
+| Baseline | 708 | 1x | ✅ |
+| + Batch Processing | 2,715 | 3.8x | ✅ |
+| + Pre-Filter | 539,337 | 115.86x | ✅ |
+
+**Raspberry Pi 4 (Production Target):**
+| Milestone | Throughput (msg/s) | Gain | Status |
+|-----------|-------------------|------|--------
+| Baseline (rules-only) | 757 | 1x | ✅ Measured |
+| + Pre-Filter | **TBD** | **TBD** | ⚠️ **NEEDS TESTING** |
+| + Adaptive Rules | **TBD** | **TBD** | 📋 Required (fixes 100% FP) |
+| + PCA Features | **TBD** | **TBD** | 📋 Required (fixes ML slowness) |
+| **TARGET** | **7,000** | **9.2x** | 🎯 **Goal** |
 
 ### Validation Criteria
 
@@ -1631,14 +1672,15 @@ If any optimization causes issues:
 
 ## Timeline Summary
 
-| Week | Phase | Milestones | Expected Throughput | Status |
-|------|-------|-----------|---------------------|--------|
-| **Week 1** | Critical Path | Batch + Pre-filter | 7,000 msg/s | TARGET |
-| Week 2 | Optimization | Rules + PCA | 10,000-12,000 msg/s | Safety margin |
-| Week 3 | Maximum | Multicore | 15,000-20,000 msg/s | 2x headroom |
+| Week | Phase | Milestones | Expected Throughput (Pi 4) | Status |
+|------|-------|-----------|---------------------------|--------|
+| **Week 1** | Implementation | Batch + Pre-filter (Ubuntu) | 539,337 msg/s | ✅ **DONE** |
+| **Week 2** | Pi Validation | **Test pre-filter on Pi 4** + Adaptive Rules + PCA | **7,000 msg/s** | ⚠️ **IN PROGRESS** |
+| Week 3 | Optional | Multicore (if needed) | 15,000+ msg/s | 📋 Optional |
 
-**Total Implementation Time:** 20-25 hours across 3 weeks  
-**Minimum Viable:** Week 1 only (6-8 hours) achieves 7K target!
+**Total Implementation Time:** 12-15 hours remaining (Week 2 critical)  
+**Critical Path:** Must test pre-filter on Raspberry Pi 4 hardware to validate 7K target!  
+**Pi Test Status:** Rules-only = 757 msg/s, ML = 17.31 msg/s (see [TESTING_ISSUES_DEC16_2025.md](TESTING_ISSUES_DEC16_2025.md))
 
 ---
 
@@ -1666,20 +1708,50 @@ If any optimization causes issues:
 
 ---
 
-## Conclusion
+## Conclusion & Next Steps
 
-This roadmap provides a research-validated path to achieve 7,000 msg/s throughput:
+### Status Summary
 
-✅ **Week 1 achieves target** with just 2 critical optimizations  
-🚀 **Week 2-3 provide safety margin** and future-proofing  
-📚 **All techniques validated** by academic research on Pi 4  
-⚡ **Incremental approach** allows testing at each step  
+✅ **Ubuntu/x86 Development:** Pre-filter achieves 539,337 msg/s (77x over target!)  
+⚠️ **Raspberry Pi 4 Production:** Only 757 msg/s measured, pre-filter NOT TESTED yet  
+❌ **Critical Issues Found on Pi:**
+- 100% false positive rate with generic rules → Need adaptive rules
+- ML 44x slower (17.31 msg/s) → Need PCA feature reduction
+- Pre-filter never tested on Pi hardware → **MUST TEST NEXT**
 
-**Start with Phase 1 to hit your 7K target, then optimize further as needed!**
+### Critical Next Steps (Week 2 - Required for 7K Target)
+
+1. **Test pre-filter on Raspberry Pi 4** (2 hours)
+   - Run `scripts/test_prefilter_real.py` on Pi hardware
+   - Validate 99.9% pass rate on ARM architecture
+   - Measure actual Pi throughput with pre-filter
+
+2. **Switch to adaptive rules** (1 hour)
+   - Change config to use `rules_adaptive.yaml`
+   - Test on Pi to verify FP rate drops from 100% to <10%
+   - Should achieve 8.43% FP per adaptive rules testing
+
+3. **Implement PCA feature reduction** (4 hours)
+   - Train reduced models (58 → 15 features)
+   - Test ML detection speed on Pi
+   - Target: 3-5x ML speedup (17.31 → 50-85 msg/s)
+
+4. **Full Pi validation** (2 hours)
+   - Test all datasets on Pi 4
+   - Verify 7,000 msg/s target achieved
+   - Document actual Pi performance
+
+### Risk Assessment
+
+🔴 **HIGH RISK:** Pre-filter may not perform as well on Pi 4 ARM vs x86  
+🟡 **MEDIUM RISK:** Adaptive rules may need tuning for specific vehicle  
+🟢 **LOW RISK:** PCA proven effective in academic research on Pi
 
 ---
 
-**Document Version:** 1.0  
+**Document Version:** 2.0  
 **Created:** December 16, 2025  
-**Status:** Ready for implementation  
-**Research Foundation:** 6 academic papers on Pi-based IDS
+**Updated:** December 16, 2025 (Pi 4 test results integrated)  
+**Status:** Phase 1 complete (Ubuntu), Phase 2 required for Pi 4 deployment  
+**Research Foundation:** 6 academic papers on Pi-based IDS (Pi 3/4 compatible)  
+**Hardware Tested:** Ubuntu/x86 ✅, Raspberry Pi 4 ⚠️ (partial)

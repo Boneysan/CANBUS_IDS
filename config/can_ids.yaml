@@ -5,7 +5,7 @@ interface: can0
 bustype: socketcan
 
 # Detection settings
-rules_file: config/rules.yaml
+rules_file: config/rules_adaptive.yaml  # Switched to adaptive rules (Dec 16, 2025) - fixes 100% FP rate
 ml_threshold: 0.75
 detection_modes:
   - rule_based
@@ -70,6 +70,56 @@ ml_detection:
     model_type: "isolation_forest"
     contamination: 0.02
     feature_window: 100
+
+# Fast Pre-Filter (Milestone 1.2 - 2-3x performance gain)
+prefilter:
+  enabled: true
+  timing_tolerance: 0.3  # ±30% timing tolerance
+  
+  # Known good CAN IDs (extracted from real vehicle data)
+  # These are the legitimate CAN IDs from the training dataset
+  known_good_ids:
+    - 0x0C1
+    - 0x0C5
+    - 0x120
+    - 0x12A
+    - 0x134
+    - 0x138
+    - 0x17F
+    - 0x184
+    - 0x191
+    - 0x199
+    - 0x19D
+    - 0x1A1
+    - 0x1C3
+    - 0x1C7
+    - 0x1CD
+    - 0x221
+    - 0x2C1
+    - 0x2C3
+    - 0x2C7
+    - 0x2CD
+    - 0x320
+    - 0x334
+    - 0x33C
+    - 0x3C1
+    - 0x3C5
+    - 0x3D1
+    - 0x3D5
+    - 0x3D9
+    - 0x3DD
+    - 0x445
+    - 0x449
+    - 0x500
+    - 0x514
+    - 0x52A
+    - 0x5C0
+    - 0x771
+    - 0x77F
+    - 0x794
+    - 0x7A0
+    - 0x7C4
+    - 0x7CD
 
 # Performance settings
 performance:
