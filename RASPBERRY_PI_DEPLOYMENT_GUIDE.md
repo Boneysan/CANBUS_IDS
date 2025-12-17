@@ -517,32 +517,126 @@ sudo systemctl disable can-ids.service
 
 ## 📊 ML Models (Optional)
 
-The latest version includes ML detection capabilities. Models are **not** included in the repository and must be trained separately.
+The latest version includes ML detection capabilities. Models are **not** included in the repository and must be trained separately or copied from the Vehicle_Models workspace.
 
-### If You Have Pre-trained Models:
+### Option 1: Copy Pre-trained Models via USB Drive (Recommended)
+
+If you've trained models in the Vehicle_Models workspace on another machine:
+
+#### On Your Development Machine:
 
 ```bash
-# Create models directory
-mkdir -p data/models
+# Plug in USB drive (will auto-mount, e.g., /media/username/USB_NAME)
+# Check mount point
+lsblk -f | grep media
 
-# Copy your trained models
-cp /path/to/your/model.pkl data/models/
+# Copy the best performing models to USB
+cp /home/mike/Documents/GitHub/Vehicle_Models/models/hybrid_crosscheck_optimized.joblib /media/username/USB_NAME/
+cp /home/mike/Documents/GitHub/Vehicle_Models/models/improved_svm_high_recall.joblib /media/username/USB_NAME/
+cp /home/mike/Documents/GitHub/Vehicle_Models/models/multistage/adaptive_load_shedding.joblib /media/username/USB_NAME/
 
-# Update config to point to your model
-nano config/can_ids.yaml
+# Verify files copied
+ls -lh /media/username/USB_NAME/*.joblib
 ```
 
-In `config/can_ids.yaml`:
+**Models to copy:**
+- **`hybrid_crosscheck_optimized.joblib`** (~965 KB) - Best balance: 100% recall, 69% precision
+- **`improved_svm_high_recall.joblib`** (~900 KB) - Optimized for safety-critical detection
+- **`adaptive_load_shedding.joblib`** (~1.3 MB) - Fastest multistage pipeline for high throughput
+
+#### On Your Raspberry Pi:
+
+```bash
+# Plug in the USB drive and wait for auto-mount
+# Check where it mounted
+lsblk -f | grep media
+
+# Create models directory
+mkdir -p ~/Documents/GitHub/CANBUS_IDS/data/models
+
+# Copy models from USB (adjust USB path as needed)
+cp /media/boneysan/USB_NAME/*.joblib ~/Documents/GitHub/CANBUS_IDS/data/models/
+
+# Verify files copied
+ls -lh ~/Documents/GitHub/CANBUS_IDS/data/models/
+
+# Eject USB safely
+umount /media/boneysan/USB_NAME
+```
+
+### Option 2: Copy via SCP (Network Transfer)
+
+If your Pi is on the same network:
+
+```bash
+# From your development machine
+# Replace 'raspberrypi.local' with your Pi's hostname or IP
+
+# Copy hybrid model
+scp /home/mike/Documents/GitHub/Vehicle_Models/models/hybrid_crosscheck_optimized.joblib \
+    boneysan@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
+
+# Copy SVM model
+scp /home/mike/Documents/GitHub/Vehicle_Models/models/improved_svm_high_recall.joblib \
+    boneysan@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
+
+# Copy multistage model
+scp /home/mike/Documents/GitHub/Vehicle_Models/models/multistage/adaptive_load_shedding.joblib \
+    boneysan@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
+```
+
+### Configure ML Detection
+
+Once models are copied, update the configuration:
+
+```bash
+# On Raspberry Pi
+nano ~/Documents/GitHub/CANBUS_IDS/config/can_ids.yaml
+```
+
+**For best balance (recommended):**
 ```yaml
 ml_detection:
   enabled: true
   contamination: 0.02
-  model_path: data/models/your_model.pkl
+  model_path: data/models/hybrid_crosscheck_optimized.joblib
+```
+
+**For maximum speed:**
+```yaml
+ml_detection:
+  enabled: true
+  contamination: 0.02
+  model_path: data/models/adaptive_load_shedding.joblib
+```
+
+**For safety-critical systems:**
+```yaml
+ml_detection:
+  enabled: true
+  contamination: 0.02
+  model_path: data/models/improved_svm_high_recall.joblib
+```
+
+### Test ML Detection
+
+```bash
+source .venv/bin/activate
+python main.py -i can0 --log-level INFO
+```
+
+Look for these startup messages:
+```
+✅ ML DETECTION ENABLED
+   Model: hybrid_crosscheck_optimized.joblib
+   Size: 965.0 KB
+   Contamination: 0.02
+   Trained: True
 ```
 
 ### If You Don't Have Models:
 
-The system will work fine with rule-based detection only:
+The system will work fine with rule-based detection only (achieves 100% recall):
 
 ```yaml
 ml_detection:
@@ -552,10 +646,23 @@ ml_detection:
 ### Training Your Own Models:
 
 Refer to the `Vehicle_Models` workspace for model training scripts. You'll need:
-1. Baseline CAN traffic from your network
+1. Baseline CAN traffic from your network (10,000+ messages)
 2. Attack samples (or use synthetic attacks)
-3. Run training scripts from Vehicle_Models project
-4. Copy resulting `.joblib` or `.pkl` files to `data/models/`
+3. Run training scripts from Vehicle_Models project:
+   ```bash
+   cd ~/Documents/GitHub/Vehicle_Models
+   python train_detectors.py --input data/raw/your_baseline.csv
+   ```
+4. Copy resulting `.joblib` files to `CANBUS_IDS/data/models/`
+
+### Model Performance Comparison
+
+| Model | Recall | Precision | Speed (msg/s) | Use Case |
+|-------|--------|-----------|---------------|----------|
+| hybrid_crosscheck_optimized | 100% | 69% | 8-12K | Best balance |
+| improved_svm_high_recall | 100% | 65% | 10-15K | Safety-critical |
+| adaptive_load_shedding | 98% | 75% | 15-25K | High throughput |
+| Rule-based only | 100% | 10% | 40-50K | No ML needed |
 
 ---
 
