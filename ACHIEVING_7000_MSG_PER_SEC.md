@@ -1,4 +1,4 @@
-# Achieving 7,000 Messages Per Second Throughput
+w# Achieving 7,000 Messages Per Second Throughput
 
 **Target:** 7,000 msg/s (3.5x current peak CAN bus traffic of 2,000 msg/s)  
 **Current Performance:** 759 msg/s (Rule-based), 15 msg/s (ML)  
