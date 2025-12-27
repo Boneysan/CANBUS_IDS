@@ -369,7 +369,12 @@ def run_comprehensive_test(data_file: str, output_dir: str, config: Dict[str, An
     rule_engine = RuleEngine(config.get('rules_file', 'config/rules.yaml'))
     ml_detector = None
     if config.get('enable_ml', False):
-        ml_detector = MLDetector()
+        # Load model path from config if available
+        ml_config = config.get('ml_model', {})
+        model_path = ml_config.get('path', 'data/models/aggressive_load_shedding.joblib')
+        contamination = ml_config.get('contamination', 0.20)
+        print(f"Loading ML model: {model_path} (contamination={contamination})")
+        ml_detector = MLDetector(model_path=model_path, contamination=contamination)
     feature_extractor = FeatureExtractor()
     
     # Start monitoring

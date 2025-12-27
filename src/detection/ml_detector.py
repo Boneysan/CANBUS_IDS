@@ -105,7 +105,7 @@ class MLDetector:
         # Feature extraction state
         self._message_history = defaultdict(lambda: deque(maxlen=feature_window))
         self._frequency_trackers = defaultdict(lambda: deque(maxlen=1000))
-        self._timing_trackers = defaultdict(list)
+        self._timing_trackers = defaultdict(lambda: deque(maxlen=50))  # Use deque for O(1) popleft
         
         # Statistics
         self._stats = {
@@ -117,11 +117,13 @@ class MLDetector:
             'prediction_time': 0.0
         }
         
-        # Initialize ML components
+        # Initialize ML components or load model
         if SKLEARN_AVAILABLE:
-            self._initialize_ml_components()
             if self.model_path and self.model_path.exists():
                 self.load_model()
+            else:
+                # Only initialize if not loading a model
+                self._initialize_ml_components()
         else:
             logger.warning("ML detection disabled - scikit-learn not available")
             
@@ -235,7 +237,11 @@ class MLDetector:
             self._update_message_state(message)
             
             # Extract features for this message
-            features = self._extract_message_features(message)
+            # Use simple feature extraction if model expects 9 features (Vehicle_Models compatibility)
+            if hasattr(self.isolation_forest, 'n_features_in_') and self.isolation_forest.n_features_in_ == 9:
+                features = self._extract_simple_features(message)
+            else:
+                features = self._extract_message_features(message)
             
             if not features:
                 return None
@@ -245,7 +251,8 @@ class MLDetector:
             
             # Convert to numpy array and normalize
             X = np.array([features])
-            X_scaled = self.scaler.transform(X)
+            # Only scale if scaler is available (some models don't need it)
+            X_scaled = self.scaler.transform(X) if self.scaler else X
             
             # Apply PCA if available (3-5x speedup for Pi 4!)
             if self.feature_reducer:
@@ -400,11 +407,63 @@ class MLDetector:
             
             timing_list = self._timing_trackers[can_id]
             timing_list.append(interval)
-            
-            # Keep last 50 intervals
-            if len(timing_list) > 50:
-                timing_list.pop(0)
+            # Deque with maxlen automatically removes oldest when full
                 
+    def _extract_simple_features(self, message: Dict[str, Any]) -> Optional[List[float]]:
+        """
+        Extract simple 9-feature set for Vehicle_Models compatibility.
+        Features: arb_id_numeric, data_length, id_frequency, time_delta,
+                  id_mean_time_delta, id_std_time_delta, hour, minute, second
+        """
+        can_id = message['can_id']
+        timestamp = message['timestamp']
+        
+        # Parse timestamp for time-based features
+        from datetime import datetime
+        dt = datetime.fromtimestamp(timestamp)
+        
+        features = [
+            float(can_id),                  # arb_id_numeric
+            float(message['dlc']),          # data_length
+        ]
+        
+        # Frequency: messages per second for this ID
+        freq_tracker = self._frequency_trackers[can_id]
+        if len(freq_tracker) >= 2:
+            time_span = timestamp - freq_tracker[0]
+            if time_span > 0:
+                features.append(float(len(freq_tracker) / time_span))
+            else:
+                features.append(0.0)
+        else:
+            features.append(0.0)
+        
+        # Time delta: milliseconds since last message for this ID
+        history = self._message_history[can_id]
+        if len(history) >= 2:
+            prev_timestamp = history[-2]['timestamp']
+            time_delta = (timestamp - prev_timestamp) * 1000  # ms
+            features.append(float(time_delta))
+        else:
+            features.append(0.0)
+        
+        # Mean and std of time deltas
+        timing_list = self._timing_trackers[can_id]
+        if len(timing_list) >= 2:
+            features.append(float(np.mean(timing_list)))
+            features.append(float(np.std(timing_list)))
+        else:
+            features.extend([0.0, 0.0])
+        
+        # Time-based features
+        features.extend([
+            float(dt.hour),
+            float(dt.minute),
+            float(dt.second)
+        ])
+        
+        return features
+    
     def _extract_message_features(self, message: Dict[str, Any]) -> Optional[List[float]]:
         """
         Extract features from a single CAN message.
@@ -422,7 +481,7 @@ class MLDetector:
         features.append(float(message.get('is_remote', False)))  # Remote frame
         
         # Data byte features (pad to 8 bytes)
-        data_bytes = message['data'][:8]  # Limit to 8 bytes
+        data_bytes = list(message['data'][:8])  # Convert bytes to list
         while len(data_bytes) < 8:
             data_bytes.append(0)
             
@@ -567,31 +626,8 @@ class MLDetector:
             # Determine format by file extension
             if str(model_path).endswith('.joblib') and JOBLIB_AVAILABLE:
                 logger.info(f"Loading joblib model from {model_path}")
-                
-                if VEHICLE_MODELS_COMPAT:
-                    # Use custom unpickler to redirect Vehicle_Models classes
-                    import io
-                    
-                    class VehicleModelsUnpickler(pickle.Unpickler):
-                        def find_class(self, module, name):
-                            # Redirect Vehicle_Models classes to our compatibility module
-                            if name == 'SimpleRuleDetector':
-                                return SimpleRuleDetector
-                            if name == 'MultiStageDetector':
-                                return MultiStageDetector
-                            # Otherwise use default behavior
-                            return super().find_class(module, name)
-                    
-                    # Joblib uses its own wrapper, so we need to patch it temporarily
-                    with open(model_path, 'rb') as f:
-                        # Read the file content
-                        file_content = f.read()
-                    
-                    # Use custom unpickler
-                    unpickler = VehicleModelsUnpickler(io.BytesIO(file_content))
-                    model_data = unpickler.load()
-                else:
-                    model_data = joblib.load(model_path)
+                # Just use joblib.load() - it handles sklearn models in dicts correctly
+                model_data = joblib.load(model_path)
             else:
                 logger.info(f"Loading pickle model from {model_path}")
                 with open(model_path, 'rb') as f:

@@ -156,10 +156,21 @@ def load_and_test(detector: FullPipelineDetector, filepath: Path, max_samples: i
 
 def main():
     """Test full pipeline on Vehicle_Models data."""
-    vehicle_models_path = Path("../Vehicle_Models")
+    # Try multiple possible locations for Vehicle_Models
+    possible_paths = [
+        Path("../Vehicle_Models"),
+        Path.home() / "Documents" / "GitHub" / "Vehicle_Models",
+        Path("/media/boneysan/Data/GitHub/Vehicle_Models")
+    ]
     
-    if not vehicle_models_path.exists():
-        logger.error(f"Vehicle_Models not found at {vehicle_models_path}")
+    vehicle_models_path = None
+    for path in possible_paths:
+        if path.exists():
+            vehicle_models_path = path
+            break
+    
+    if vehicle_models_path is None:
+        logger.error(f"Vehicle_Models not found in any of: {possible_paths}")
         return
     
     raw_data_path = vehicle_models_path / 'data' / 'raw'
