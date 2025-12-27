@@ -1,0 +1,72 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Data/can_capture_30min.csv",
+    "test_date": "2025-12-03T21:37:58.981296",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 38.01809787750244,
+    "messages_processed": 32523,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 855.4609992533525,
+    "alerts_generated": 80914,
+    "alert_rate_percent": 248.790087015343,
+    "alerts_by_severity": {
+      "MEDIUM": 61999,
+      "HIGH": 18915
+    },
+    "alerts_by_type": {
+      "Counter Sequence Error": 29476,
+      "Unknown CAN ID": 32523,
+      "Exact Message Replay": 18915
+    },
+    "detection_accuracy": {
+      "true_positives": 0,
+      "false_positives": 32523,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "accuracy": 0.0
+    },
+    "latency_ms": {
+      "mean": 1.0133711822475047,
+      "median": 0.9031295776367188,
+      "min": 0.12731552124023438,
+      "max": 19.623756408691406,
+      "p95": 1.8286705017089844,
+      "p99": 2.941131591796875
+    }
+  },
+  "system": {
+    "total_samples": 23,
+    "duration_seconds": 37.19247579574585,
+    "cpu_percent": {
+      "mean": 24.272826086956524,
+      "max": 30.05,
+      "min": 9.3
+    },
+    "cpu_percent_system": {
+      "mean": 61.02608695652174,
+      "max": 98.0,
+      "min": 34.9
+    },
+    "memory_rss_mb": {
+      "mean": 215.68851902173913,
+      "max": 222.42578125,
+      "min": 156.30078125
+    },
+    "temperature_c": {
+      "mean": 52.90869565217392,
+      "max": 53.5,
+      "min": 51.6
+    },
+    "throttling_occurred": false
+  }
+}

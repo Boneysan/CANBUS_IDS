@@ -1,0 +1,38 @@
+{
+  "duration_seconds": 66.25620150566101,
+  "messages_processed": 50000,
+  "messages_dropped": 0,
+  "drop_rate_percent": 0.0,
+  "throughput_msg_per_sec": 754.646340474679,
+  "alerts_generated": 146417,
+  "alert_rate_percent": 292.834,
+  "alerts_by_severity": {
+    "MEDIUM": 99873,
+    "HIGH": 29971,
+    "LOW": 16573
+  },
+  "alerts_by_type": {
+    "Counter Sequence Error": 49873,
+    "Unknown CAN ID": 50000,
+    "Exact Message Replay": 29971,
+    "Repeated Data Pattern": 16573
+  },
+  "detection_accuracy": {
+    "true_positives": 9139,
+    "false_positives": 40861,
+    "true_negatives": 0,
+    "false_negatives": 0,
+    "precision": 0.18278,
+    "recall": 1.0,
+    "f1_score": 0.30906846581781905,
+    "accuracy": 0.18278
+  },
+  "latency_ms": {
+    "mean": 1.2899718570709229,
+    "median": 1.2485980987548828,
+    "min": 0.16427040100097656,
+    "max": 14.500856399536133,
+    "p95": 2.010822296142578,
+    "p99": 2.6302337646484375
+  }
+}

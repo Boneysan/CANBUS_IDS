@@ -1,0 +1,83 @@
+{
+  "test_info": {
+    "data_file": "test_data/attack-free-1.csv",
+    "test_date": "2025-12-27T11:58:02.962273",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules_adaptive.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 255.4327175617218,
+    "messages_processed": 1952833,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 7645.195253924841,
+    "alerts_generated": 155740,
+    "alert_rate_percent": 7.975080306406129,
+    "alerts_by_severity": {
+      "MEDIUM": 155740
+    },
+    "alerts_by_type": {
+      "Timing Anomaly - CAN ID 0x191 (high-traffic, low-jitter)": 31937,
+      "Timing Anomaly - CAN ID 0x1F5 (medium-traffic, low-jitter)": 53975,
+      "Timing Anomaly - CAN ID 0x2C3 (medium-traffic, low-jitter)": 2365,
+      "Timing Anomaly - CAN ID 0x3ED (medium-traffic, low-jitter)": 13488,
+      "Timing Anomaly - CAN ID 0x12A (medium-traffic, low-jitter)": 13501,
+      "Timing Anomaly - CAN ID 0x134 (medium-traffic, low-jitter)": 13501,
+      "Timing Anomaly - CAN ID 0x3C1 (medium-traffic, low-jitter)": 13337,
+      "Timing Anomaly - CAN ID 0x3D1 (medium-traffic, low-jitter)": 927,
+      "Timing Anomaly - CAN ID 0x3E9 (medium-traffic, low-jitter)": 2393,
+      "Timing Anomaly - CAN ID 0x1F1 (medium-traffic, low-jitter)": 3833,
+      "Timing Anomaly - CAN ID 0x4C9 (low-traffic, low-jitter)": 2643,
+      "Timing Anomaly - CAN ID 0x4C1 (low-traffic, low-jitter)": 2393,
+      "Timing Anomaly - CAN ID 0x4D1 (low-traffic, low-jitter)": 809,
+      "Timing Anomaly - CAN ID 0x3C9 (medium-traffic, low-jitter)": 637,
+      "Timing Anomaly - CAN ID 0x1F3 (medium-traffic, high-jitter)": 1
+    },
+    "detection_accuracy": {
+      "true_positives": 0,
+      "false_positives": 155740,
+      "true_negatives": 1797093,
+      "false_negatives": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "accuracy": 0.9202491969359388
+    },
+    "latency_ms": {
+      "mean": 0.10972446528161371,
+      "median": 0.09202957153320312,
+      "min": 0.07271766662597656,
+      "max": 11.293172836303711,
+      "p95": 0.15854835510253906,
+      "p99": 0.27680397033691406
+    }
+  },
+  "system": {
+    "total_samples": 154,
+    "duration_seconds": 256.28439807891846,
+    "cpu_percent": {
+      "mean": 25.0150974025974,
+      "max": 55.2,
+      "min": 9.175
+    },
+    "cpu_percent_system": {
+      "mean": 34.83831168831168,
+      "max": 100.0,
+      "min": 0.0
+    },
+    "memory_rss_mb": {
+      "mean": 715.7539316152597,
+      "max": 798.859375,
+      "min": 162.63671875
+    },
+    "temperature_c": {
+      "mean": 47.86233766233754,
+      "max": 49.6,
+      "min": 46.2
+    },
+    "throttling_occurred": false
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "test_info": {
+    "data_file": "test_data/attack-free-1.csv",
+    "test_date": "2025-12-27T09:44:10.836098",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules_adaptive.yaml"
+    }
+  },
+  "performance": {},
+  "system": {
+    "total_samples": 11,
+    "duration_seconds": 16.96717667579651,
+    "cpu_percent": {
+      "mean": 19.813636363636363,
+      "max": 27.3,
+      "min": 0.0
+    },
+    "cpu_percent_system": {
+      "mean": 42.39090909090909,
+      "max": 74.3,
+      "min": 21.1
+    },
+    "memory_rss_mb": {
+      "mean": 264.37961647727275,
+      "max": 385.37890625,
+      "min": 159.44921875
+    },
+    "temperature_c": {
+      "mean": 48.92727272727273,
+      "max": 49.6,
+      "min": 47.7
+    },
+    "throttling_occurred": false
+  }
+}

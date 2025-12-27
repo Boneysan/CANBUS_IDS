@@ -1,0 +1,85 @@
+{
+  "test_info": {
+    "data_file": "test_data/DoS-1.csv",
+    "test_date": "2025-12-27T09:45:37.697078",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules_adaptive.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 15.349093198776245,
+    "messages_processed": 90169,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 5874.548993369133,
+    "alerts_generated": 6632,
+    "alert_rate_percent": 7.3550776874535595,
+    "alerts_by_severity": {
+      "MEDIUM": 6632
+    },
+    "alerts_by_type": {
+      "Timing Anomaly - CAN ID 0x191 (high-traffic, low-jitter)": 1239,
+      "Timing Anomaly - CAN ID 0x1F5 (medium-traffic, low-jitter)": 2227,
+      "Timing Anomaly - CAN ID 0x12A (medium-traffic, low-jitter)": 503,
+      "Timing Anomaly - CAN ID 0x134 (medium-traffic, low-jitter)": 491,
+      "Timing Anomaly - CAN ID 0x3C1 (medium-traffic, low-jitter)": 548,
+      "Timing Anomaly - CAN ID 0x3ED (medium-traffic, low-jitter)": 553,
+      "Timing Anomaly - CAN ID 0x1F1 (medium-traffic, low-jitter)": 291,
+      "Timing Anomaly - CAN ID 0x3C9 (medium-traffic, low-jitter)": 70,
+      "Timing Anomaly - CAN ID 0x4C9 (low-traffic, low-jitter)": 105,
+      "Timing Anomaly - CAN ID 0x4C1 (low-traffic, low-jitter)": 97,
+      "Timing Anomaly - CAN ID 0x1A1 (medium-traffic, low-jitter)": 7,
+      "Timing Anomaly - CAN ID 0x2C3 (medium-traffic, low-jitter)": 184,
+      "Timing Anomaly - CAN ID 0x334 (medium-traffic, low-jitter)": 7,
+      "Timing Anomaly - CAN ID 0x3D1 (medium-traffic, low-jitter)": 57,
+      "Timing Anomaly - CAN ID 0x3E9 (medium-traffic, low-jitter)": 233,
+      "Timing Anomaly - CAN ID 0x4D1 (low-traffic, low-jitter)": 19,
+      "Timing Anomaly - CAN ID 0x1F3 (medium-traffic, high-jitter)": 1
+    },
+    "detection_accuracy": {
+      "true_positives": 0,
+      "false_positives": 6632,
+      "true_negatives": 74398,
+      "false_negatives": 9139,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "accuracy": 0.8250950992026085
+    },
+    "latency_ms": {
+      "mean": 0.1437489492945652,
+      "median": 0.10371208190917969,
+      "min": 0.06103515625,
+      "max": 25.790691375732422,
+      "p95": 0.29659271240234375,
+      "p99": 0.5664825439453125
+    }
+  },
+  "system": {
+    "total_samples": 9,
+    "duration_seconds": 14.539177656173706,
+    "cpu_percent": {
+      "mean": 25.9,
+      "max": 29.725,
+      "min": 22.4
+    },
+    "cpu_percent_system": {
+      "mean": 46.26666666666667,
+      "max": 68.0,
+      "min": 37.0
+    },
+    "memory_rss_mb": {
+      "mean": 180.59678819444446,
+      "max": 184.90625,
+      "min": 160.98046875
+    },
+    "temperature_c": {
+      "mean": 49.71111111111112,
+      "max": 50.6,
+      "min": 49.1
+    },
+    "throttling_occurred": false
+  }
+}

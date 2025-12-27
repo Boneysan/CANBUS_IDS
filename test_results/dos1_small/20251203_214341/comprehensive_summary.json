@@ -1,0 +1,74 @@
+{
+  "test_info": {
+    "data_file": "/tmp/dos1_small.csv",
+    "test_date": "2025-12-03T21:44:48.191028",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 65.85681915283203,
+    "messages_processed": 50000,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 759.2228207069405,
+    "alerts_generated": 146417,
+    "alert_rate_percent": 292.834,
+    "alerts_by_severity": {
+      "MEDIUM": 99873,
+      "HIGH": 29971,
+      "LOW": 16573
+    },
+    "alerts_by_type": {
+      "Counter Sequence Error": 49873,
+      "Unknown CAN ID": 50000,
+      "Exact Message Replay": 29971,
+      "Repeated Data Pattern": 16573
+    },
+    "detection_accuracy": {
+      "true_positives": 9139,
+      "false_positives": 40861,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.18278,
+      "recall": 1.0,
+      "f1_score": 0.30906846581781905,
+      "accuracy": 0.18278
+    },
+    "latency_ms": {
+      "mean": 1.2843633937835692,
+      "median": 1.2209415435791016,
+      "min": 0.1373291015625,
+      "max": 16.476154327392578,
+      "p95": 2.0380020141601562,
+      "p99": 2.5174617767333984
+    }
+  },
+  "system": {
+    "total_samples": 38,
+    "duration_seconds": 65.07846021652222,
+    "cpu_percent": {
+      "mean": 25.300657894736837,
+      "max": 28.725,
+      "min": 22.325
+    },
+    "cpu_percent_system": {
+      "mean": 49.31315789473685,
+      "max": 76.0,
+      "min": 35.6
+    },
+    "memory_rss_mb": {
+      "mean": 173.31620065789474,
+      "max": 178.46875,
+      "min": 161.296875
+    },
+    "temperature_c": {
+      "mean": 52.80263157894737,
+      "max": 54.5,
+      "min": 51.1
+    },
+    "throttling_occurred": false
+  }
+}

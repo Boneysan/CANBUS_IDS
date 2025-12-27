@@ -31,19 +31,57 @@ print("=" * 80)
 print("Testing: Baseline vs PCA-reduced ML inference")
 print("=" * 80)
 
-# Load pre-extracted features
+# Load raw CAN data and extract features
 print("\n📊 Loading data...")
-df = pd.read_csv("../Vehicle_Models/data/processed/train_normal_comprehensive.csv")
-print(f"✅ Loaded {len(df):,} samples")
+# Try different paths
+possible_paths = [
+    Path("test_data/attack-free-1.csv"),
+    Path("../Vehicle_Models/data/raw/attack-free-1.csv"),
+    Path.home() / "Documents" / "GitHub" / "Vehicle_Models" / "data" / "raw" / "attack-free-1.csv"
+]
+
+data_path = None
+for path in possible_paths:
+    if path.exists():
+        data_path = path
+        break
+
+if data_path is None:
+    print("❌ Could not find attack-free-1.csv in any expected location")
+    sys.exit(1)
+
+print(f"Loading from: {data_path}")
+df_raw = pd.read_csv(data_path)
+print(f"✅ Loaded {len(df_raw):,} raw samples")
 
 # Use a subset for faster testing
 sample_size = 50000
-df_sample = df.sample(n=min(sample_size, len(df)), random_state=42)
-print(f"Using {len(df_sample):,} samples for testing")
+df_raw = df_raw.sample(n=min(sample_size, len(df_raw)), random_state=42)
+print(f"Using {len(df_raw):,} samples for testing")
 
-# Prepare features
-X = df_sample.drop(columns=['attack', 'source_file'], errors='ignore').values
-y = df_sample['attack'].values if 'attack' in df_sample.columns else np.zeros(len(df_sample))
+# Extract features using decision tree detector
+print("\n🔧 Extracting features...")
+from src.detection.decision_tree_detector import DecisionTreeDetector
+
+detector = DecisionTreeDetector()
+features_list = []
+
+for idx, row in df_raw.iterrows():
+    # Convert to message format
+    message = {
+        'can_id': int(row['arbitration_id'], 16) if isinstance(row['arbitration_id'], str) else int(row['arbitration_id']),
+        'timestamp': float(row['timestamp']),
+        'data': bytes.fromhex(row['data_field']) if isinstance(row['data_field'], str) else row['data_field'],
+        'dlc': 8
+    }
+    features = detector.extract_features(message)
+    features_list.append(features)
+    
+    if (idx + 1) % 10000 == 0:
+        print(f"  Processed {idx + 1:,} messages...")
+
+X = np.array(features_list)
+y = df_raw['attack'].values if 'attack' in df_raw.columns else np.zeros(len(df_raw))
 
 print(f"Features: {X.shape[1]}")
 print(f"Samples: {X.shape[0]:,}")

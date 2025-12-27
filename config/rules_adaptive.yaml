@@ -59,10 +59,10 @@ rules:
   check_timing: true
   expected_interval: 5.46
   interval_variance: 3.17
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x0C1
   can_id: 193
@@ -81,10 +81,10 @@ rules:
   check_timing: true
   expected_interval: 5.46
   interval_variance: 3.17
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x0C5
   can_id: 197
@@ -125,10 +125,10 @@ rules:
   check_timing: true
   expected_interval: 6.06
   interval_variance: 3.32
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x0F1
   can_id: 241
@@ -147,10 +147,10 @@ rules:
   check_timing: true
   expected_interval: 7.59
   interval_variance: 3.82
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x0F9
   can_id: 249
@@ -172,7 +172,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x12A (medium-traffic, low-jitter)
   can_id: 298
@@ -183,10 +183,10 @@ rules:
   check_timing: true
   expected_interval: 60.64
   interval_variance: 25.62
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x12A
   can_id: 298
@@ -205,10 +205,10 @@ rules:
   check_timing: true
   expected_interval: 60.64
   interval_variance: 25.66
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x134
   can_id: 308
@@ -230,7 +230,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x17D (medium-traffic, high-jitter)
   can_id: 381
@@ -285,10 +285,10 @@ rules:
   check_timing: true
   expected_interval: 10.92
   interval_variance: 5.81
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x184
   can_id: 388
@@ -329,10 +329,10 @@ rules:
   check_timing: true
   expected_interval: 7.59
   interval_variance: 3.83
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x199
   can_id: 409
@@ -351,10 +351,10 @@ rules:
   check_timing: true
   expected_interval: 15.17
   interval_variance: 5.91
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x19D
   can_id: 413
@@ -373,10 +373,10 @@ rules:
   check_timing: true
   expected_interval: 15.16
   interval_variance: 6.78
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x1A1
   can_id: 417
@@ -395,10 +395,10 @@ rules:
   check_timing: true
   expected_interval: 15.16
   interval_variance: 6.78
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x1C3
   can_id: 451
@@ -417,10 +417,10 @@ rules:
   check_timing: true
   expected_interval: 10.92
   interval_variance: 5.81
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x1C7
   can_id: 455
@@ -439,10 +439,10 @@ rules:
   check_timing: true
   expected_interval: 10.92
   interval_variance: 5.81
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x1CD
   can_id: 461
@@ -483,10 +483,10 @@ rules:
   check_timing: true
   expected_interval: 5.46
   interval_variance: 3.16
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x1E5
   can_id: 485
@@ -505,10 +505,10 @@ rules:
   check_timing: true
   expected_interval: 10.92
   interval_variance: 5.81
-  sigma_extreme: 2.8
-  sigma_moderate: 1.4
+  sigma_extreme: 3.5
+  sigma_moderate: 2.0
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x1E9
   can_id: 489
@@ -527,10 +527,10 @@ rules:
   check_timing: true
   expected_interval: 60.62
   interval_variance: 25.85
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x1F1
   can_id: 497
@@ -571,10 +571,10 @@ rules:
   check_timing: true
   expected_interval: 15.17
   interval_variance: 5.91
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x1F5
   can_id: 501
@@ -593,10 +593,10 @@ rules:
   check_timing: true
   expected_interval: 30.33
   interval_variance: 12.35
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x2C3
   can_id: 707
@@ -637,10 +637,10 @@ rules:
   check_timing: true
   expected_interval: 18.19
   interval_variance: 8.33
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x334
   can_id: 820
@@ -703,10 +703,10 @@ rules:
   check_timing: true
   expected_interval: 60.66
   interval_variance: 25.64
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x3C1
   can_id: 961
@@ -725,10 +725,10 @@ rules:
   check_timing: true
   expected_interval: 60.64
   interval_variance: 26.11
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x3C9
   can_id: 969
@@ -747,10 +747,10 @@ rules:
   check_timing: true
   expected_interval: 60.66
   interval_variance: 25.64
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x3D1
   can_id: 977
@@ -769,10 +769,10 @@ rules:
   check_timing: true
   expected_interval: 60.66
   interval_variance: 25.65
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x3E9
   can_id: 1001
@@ -791,10 +791,10 @@ rules:
   check_timing: true
   expected_interval: 60.71
   interval_variance: 22.92
-  sigma_extreme: 2.8
+  sigma_extreme: 3.5
   sigma_moderate: 1.5
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: High Frequency - CAN ID 0x3ED
   can_id: 1005
@@ -816,7 +816,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x3F9 (low-traffic, high-jitter)
   can_id: 1017
@@ -830,7 +830,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x3FB (low-traffic, high-jitter)
   can_id: 1019
@@ -844,7 +844,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x4C1 (low-traffic, low-jitter)
   can_id: 1217
@@ -900,7 +900,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x4E9 (low-traffic, high-jitter)
   can_id: 1257
@@ -914,7 +914,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x4F1 (low-traffic, low-jitter)
   can_id: 1265
@@ -956,7 +956,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x52A (low-traffic, high-jitter)
   can_id: 1322
@@ -970,7 +970,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x771 (low-traffic, high-jitter)
   can_id: 1905
@@ -984,7 +984,7 @@ rules:
   sigma_extreme: 3.3
   sigma_moderate: 1.8
   payload_repetition_threshold: 0.55
-  consecutive_required: 5
+  consecutive_required: 7
   priority: 5
 - name: Timing Anomaly - CAN ID 0x772 (low-traffic, low-jitter)
   can_id: 1906

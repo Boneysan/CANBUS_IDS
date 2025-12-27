@@ -1,0 +1,51 @@
+rules:
+# ========================================================================
+# FUZZING DETECTION RULES (Dec 14, 2025)
+# Fast static checks to catch obvious fuzzing before ML analysis
+# ========================================================================
+
+- name: "Invalid CAN ID Range"
+  severity: HIGH
+  description: "CAN ID outside valid range for this vehicle (fuzzing indicator)"
+  action: alert
+  check_can_id_range: true
+  min_can_id: 0x000
+  max_can_id: 0x7FF
+  priority: 2
+
+# NOTE: All-zeros payload rule removed - legitimate messages can have zero payloads
+# Fuzzing detection now relies on:
+#   1. All-ones pattern (rarer in normal traffic)
+#   2. Sequential patterns  
+#   3. High entropy (random fuzzing)
+#   4. ML detector (Stage 3) for subtle patterns
+
+- name: "Constant Payload - All Ones"
+  severity: MEDIUM
+  description: "Payload is all 0xFF (rare pattern, fuzzing indicator)"
+  action: alert
+  check_payload_pattern: true
+  pattern_types:
+    all_ones: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+  priority: 5
+
+- name: "Sequential Payload Pattern"
+  severity: MEDIUM
+  description: "Payload shows sequential pattern (0x00,0x01,0x02...) - fuzzing indicator"
+  action: alert
+  check_payload_pattern: true
+  pattern_types:
+    sequential: "sequential_check"
+  priority: 5
+
+- name: "Excessive Payload Entropy"
+  severity: MEDIUM
+  description: "Payload randomness exceeds threshold (fuzzing indicator)"
+  action: alert
+  check_entropy: true
+  min_entropy: 6.5
+  priority: 5
+
+# ========================================================================
+# TIMING-BASED DETECTION RULES (Original)
+# Timing rules removed - use ML for DoS/Interval detection

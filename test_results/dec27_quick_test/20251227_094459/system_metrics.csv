@@ -1,0 +1,2 @@
+timestamp,time_str,cpu_percent,cpu_percent_system,cpu_count,memory_rss_mb,memory_vms_mb,memory_percent,memory_available_mb,memory_total_mb,load_1min,load_5min,load_15min,temperature_c,throttle_status,num_threads,num_fds,cpu_core_0_percent,cpu_core_1_percent,cpu_core_2_percent,cpu_core_3_percent
+1766853899.6812477,2025-12-27T09:44:59.681257,21.45,12.5,4,155.6640625,648.45703125,4.099806892408104,1670.2265625,3796.86328125,3.1455078125,2.96435546875,2.28955078125,49.1,0x0,8,15,50.0,50.0,45.5,22.2

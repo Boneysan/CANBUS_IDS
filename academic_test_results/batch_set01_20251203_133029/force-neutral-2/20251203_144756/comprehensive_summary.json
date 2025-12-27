@@ -1,0 +1,37 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01/force-neutral-2.csv",
+    "test_date": "2025-12-03T15:04:19.898840",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": true,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {},
+  "system": {
+    "total_samples": 588,
+    "duration_seconds": 981.2339677810669,
+    "cpu_percent": {
+      "mean": 24.996981292516956,
+      "max": 52.275,
+      "min": 11.525
+    },
+    "cpu_percent_system": {
+      "mean": 34.4093537414966,
+      "max": 100.0,
+      "min": 23.4
+    },
+    "memory_rss_mb": {
+      "mean": 465.41783588435374,
+      "max": 524.01953125,
+      "min": 127.59765625
+    },
+    "temperature_c": {
+      "mean": 50.72108843537369,
+      "max": 53.0,
+      "min": 48.7
+    },
+    "throttling_occurred": false
+  }
+}

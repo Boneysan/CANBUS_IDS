@@ -1,0 +1,74 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Data/GitHub/Vehicle_Models/data/raw/DoS-1.csv",
+    "test_date": "2025-12-16T21:03:55.897900",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 127.31987404823303,
+    "messages_processed": 90169,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 708.2083663218278,
+    "alerts_generated": 271088,
+    "alert_rate_percent": 300.6443456176735,
+    "alerts_by_severity": {
+      "MEDIUM": 180026,
+      "HIGH": 63088,
+      "LOW": 27974
+    },
+    "alerts_by_type": {
+      "Counter Sequence Error": 89857,
+      "Unknown CAN ID": 90169,
+      "Exact Message Replay": 63088,
+      "Repeated Data Pattern": 27974
+    },
+    "detection_accuracy": {
+      "true_positives": 9139,
+      "false_positives": 81030,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.10135412392285598,
+      "recall": 1.0,
+      "f1_score": 0.18405365126676604,
+      "accuracy": 0.10135412392285598
+    },
+    "latency_ms": {
+      "mean": 1.374015065739464,
+      "median": 1.2710094451904297,
+      "min": 0.15592575073242188,
+      "max": 19.94609832763672,
+      "p95": 2.2203922271728516,
+      "p99": 3.0858516693115234
+    }
+  },
+  "system": {
+    "total_samples": 74,
+    "duration_seconds": 126.17904448509216,
+    "cpu_percent": {
+      "mean": 25.226351351351354,
+      "max": 30.725,
+      "min": 16.425
+    },
+    "cpu_percent_system": {
+      "mean": 52.72162162162164,
+      "max": 98.3,
+      "min": 34.9
+    },
+    "memory_rss_mb": {
+      "mean": 188.34765625,
+      "max": 194.90625,
+      "min": 157.60546875
+    },
+    "temperature_c": {
+      "mean": 51.23648648648644,
+      "max": 53.5,
+      "min": 46.7
+    },
+    "throttling_occurred": false
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01/standstill-2.csv",
+    "test_date": "2025-12-03T16:26:35.859258",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": true,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {},
+  "system": {
+    "total_samples": 785,
+    "duration_seconds": 1313.3947446346283,
+    "cpu_percent": {
+      "mean": 24.92302547770699,
+      "max": 32.075,
+      "min": 9.425
+    },
+    "cpu_percent_system": {
+      "mean": 40.423821656050926,
+      "max": 100.0,
+      "min": 22.9
+    },
+    "memory_rss_mb": {
+      "mean": 551.9707056130574,
+      "max": 619.375,
+      "min": 127.90625
+    },
+    "temperature_c": {
+      "mean": 51.985477707005785,
+      "max": 55.0,
+      "min": 49.6
+    },
+    "throttling_occurred": false
+  }
+}

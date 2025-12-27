@@ -1,0 +1,47 @@
+{
+  "duration_seconds": 16.179699182510376,
+  "messages_processed": 90169,
+  "messages_dropped": 0,
+  "drop_rate_percent": 0.0,
+  "throughput_msg_per_sec": 5572.971350262752,
+  "alerts_generated": 6139,
+  "alert_rate_percent": 6.808326586742671,
+  "alerts_by_severity": {
+    "MEDIUM": 6139
+  },
+  "alerts_by_type": {
+    "Timing Anomaly - CAN ID 0x191 (high-traffic, low-jitter)": 1239,
+    "Timing Anomaly - CAN ID 0x1F5 (medium-traffic, low-jitter)": 2217,
+    "Timing Anomaly - CAN ID 0x12A (medium-traffic, low-jitter)": 430,
+    "Timing Anomaly - CAN ID 0x134 (medium-traffic, low-jitter)": 418,
+    "Timing Anomaly - CAN ID 0x3C1 (medium-traffic, low-jitter)": 534,
+    "Timing Anomaly - CAN ID 0x3ED (medium-traffic, low-jitter)": 551,
+    "Timing Anomaly - CAN ID 0x1F1 (medium-traffic, low-jitter)": 138,
+    "Timing Anomaly - CAN ID 0x4C9 (low-traffic, low-jitter)": 105,
+    "Timing Anomaly - CAN ID 0x4C1 (low-traffic, low-jitter)": 97,
+    "Timing Anomaly - CAN ID 0x3C9 (medium-traffic, low-jitter)": 10,
+    "Timing Anomaly - CAN ID 0x2C3 (medium-traffic, low-jitter)": 118,
+    "Timing Anomaly - CAN ID 0x3E9 (medium-traffic, low-jitter)": 222,
+    "Timing Anomaly - CAN ID 0x3D1 (medium-traffic, low-jitter)": 40,
+    "Timing Anomaly - CAN ID 0x4D1 (low-traffic, low-jitter)": 19,
+    "Timing Anomaly - CAN ID 0x1F3 (medium-traffic, high-jitter)": 1
+  },
+  "detection_accuracy": {
+    "true_positives": 0,
+    "false_positives": 6139,
+    "true_negatives": 74891,
+    "false_negatives": 9139,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1_score": 0.0,
+    "accuracy": 0.8305626102097173
+  },
+  "latency_ms": {
+    "mean": 0.14937750139204614,
+    "median": 0.10895729064941406,
+    "min": 0.06198883056640625,
+    "max": 6.123065948486328,
+    "p95": 0.36144256591796875,
+    "p99": 0.7441043853759766
+  }
+}

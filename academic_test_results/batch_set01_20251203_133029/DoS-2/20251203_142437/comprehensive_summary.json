@@ -1,0 +1,37 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01/DoS-2.csv",
+    "test_date": "2025-12-03T14:29:27.962332",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": true,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {},
+  "system": {
+    "total_samples": 175,
+    "duration_seconds": 289.22663927078247,
+    "cpu_percent": {
+      "mean": 25.120285714285753,
+      "max": 32.2,
+      "min": 22.175
+    },
+    "cpu_percent_system": {
+      "mean": 29.446285714285715,
+      "max": 100.0,
+      "min": 23.4
+    },
+    "memory_rss_mb": {
+      "mean": 233.31216517857143,
+      "max": 256.3828125,
+      "min": 130.4609375
+    },
+    "temperature_c": {
+      "mean": 49.229714285714394,
+      "max": 51.6,
+      "min": 47.7
+    },
+    "throttling_occurred": false
+  }
+}

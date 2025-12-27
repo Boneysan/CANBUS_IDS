@@ -1,0 +1,74 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/test_01_known_vehicle_known_attack/DoS-3.csv",
+    "test_date": "2025-12-03T20:13:06.801467",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 52.68933629989624,
+    "messages_processed": 43328,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 822.3295839861495,
+    "alerts_generated": 122535,
+    "alert_rate_percent": 282.80788404726735,
+    "alerts_by_severity": {
+      "MEDIUM": 86309,
+      "HIGH": 28479,
+      "LOW": 7747
+    },
+    "alerts_by_type": {
+      "Counter Sequence Error": 42981,
+      "Unknown CAN ID": 43328,
+      "Exact Message Replay": 28479,
+      "Repeated Data Pattern": 7747
+    },
+    "detection_accuracy": {
+      "true_positives": 6686,
+      "false_positives": 36642,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.1543112998522895,
+      "recall": 1.0,
+      "f1_score": 0.2673651377614268,
+      "accuracy": 0.1543112998522895
+    },
+    "latency_ms": {
+      "mean": 1.1322648818859147,
+      "median": 0.9660720825195312,
+      "min": 0.13399124145507812,
+      "max": 28.871774673461914,
+      "p95": 1.9686222076416016,
+      "p99": 3.7915706634521484
+    }
+  },
+  "system": {
+    "total_samples": 32,
+    "duration_seconds": 52.42042255401611,
+    "cpu_percent": {
+      "mean": 23.686718749999997,
+      "max": 27.5,
+      "min": 8.9
+    },
+    "cpu_percent_system": {
+      "mean": 54.415624999999984,
+      "max": 100.0,
+      "min": 24.4
+    },
+    "memory_rss_mb": {
+      "mean": 169.5283203125,
+      "max": 174.6328125,
+      "min": 127.7734375
+    },
+    "temperature_c": {
+      "mean": 50.82187499999998,
+      "max": 52.1,
+      "min": 48.7
+    },
+    "throttling_occurred": false
+  }
+}

@@ -227,21 +227,36 @@ def main():
     logger.info(f"   Tree depth: {detector.tree.get_depth()}")
     logger.info(f"   Tree leaves: {detector.tree.get_n_leaves()}")
     
-    # Define test datasets
-    vehicle_models_path = Path("../Vehicle_Models/data/raw")
+    # Define test datasets - try multiple locations
+    possible_paths = [
+        Path("test_data"),  # Local test data
+        Path("../Vehicle_Models/data/raw"),  # Original location
+        Path.home() / "Documents" / "GitHub" / "Vehicle_Models" / "data" / "raw",
+    ]
+    
+    test_data_path = None
+    for path in possible_paths:
+        if path.exists():
+            test_data_path = path
+            logger.info(f"Using test data from: {test_data_path}")
+            break
+    
+    if test_data_path is None:
+        logger.error("Test data not found in any expected location")
+        return 1
     
     test_cases = [
         # Attack types
-        (vehicle_models_path / "fuzzing-1.csv", "Fuzzing Attack (Set 1)", True),
-        (vehicle_models_path / "fuzzing-2.csv", "Fuzzing Attack (Set 2)", True),
-        (vehicle_models_path / "DoS-1.csv", "DoS Attack (Set 1)", True),
-        (vehicle_models_path / "DoS-2.csv", "DoS Attack (Set 2)", True),
-        (vehicle_models_path / "interval-1.csv", "Interval Timing Attack (Set 1)", True),
-        (vehicle_models_path / "interval-2.csv", "Interval Timing Attack (Set 2)", True),
+        (test_data_path / "fuzzing-1.csv", "Fuzzing Attack (Set 1)", True),
+        (test_data_path / "fuzzing-2.csv", "Fuzzing Attack (Set 2)", True),
+        (test_data_path / "DoS-1.csv", "DoS Attack (Set 1)", True),
+        (test_data_path / "DoS-2.csv", "DoS Attack (Set 2)", True),
+        (test_data_path / "interval-1.csv", "Interval Timing Attack (Set 1)", True),
+        (test_data_path / "interval-2.csv", "Interval Timing Attack (Set 2)", True),
         
         # Normal traffic
-        (vehicle_models_path / "attack-free-1.csv", "Normal Traffic (Set 1)", False),
-        (vehicle_models_path / "attack-free-2.csv", "Normal Traffic (Set 2)", False),
+        (test_data_path / "attack-free-1.csv", "Normal Traffic (Set 1)", False),
+        (test_data_path / "attack-free-2.csv", "Normal Traffic (Set 2)", False),
     ]
     
     # Run tests
