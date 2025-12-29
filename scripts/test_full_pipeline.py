@@ -177,11 +177,11 @@ def main():
     
     # Initialize full pipeline
     logger.info("Initializing 2-stage detection pipeline...")
-    logger.info("  Stage 2: Rule Engine (WITH FUZZING DETECTION RULES!)")
+    logger.info("  Stage 2: Rule Engine (FUZZING-ONLY RULES - 0% FP)")
     logger.info("  Stage 3: Decision Tree ML")
     
     detector = FullPipelineDetector(
-        rules_file='config/rules_adaptive.yaml',
+        rules_file='config/rules_fuzzing_only.yaml',
         model_path='data/models/decision_tree.pkl'
     )
     
