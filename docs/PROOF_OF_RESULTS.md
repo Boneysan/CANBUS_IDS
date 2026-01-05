@@ -1,9 +1,10 @@
 # CAN-IDS Detection Performance - Proof of Results
 
-**Date:** January 3, 2026  
+**Date:** January 3, 2026 (Updated: January 5, 2026)  
 **System:** Raspberry Pi 4 Model B (4GB RAM, Python 3.11.2)  
 **Project:** CAN Bus Intrusion Detection System  
-**Testing Period:** December 16-27, 2025  
+**Testing Period:** December 16, 2025 - January 5, 2026  
+**Version:** 2.0 - Complete Metrics with Dataset Quality Analysis  
 
 ---
 
@@ -15,13 +16,17 @@ This document provides **verifiable evidence** of the CAN-IDS detection system's
 3. **Reproducible test scripts** with exact commands
 4. **Multiple independent test runs** confirming consistency
 5. **Real attack datasets** from published research
+6. **Complete confusion matrices** with TP/FP/TN/FN metrics (Jan 5, 2026)
+7. **System resource monitoring** (CPU/RAM/Temperature)
 
-**Key Claims Proven:**
-- ✅ **98-99% DoS attack detection** (Enhanced Hybrid approach)
-- ✅ **15-31% false positive rate** on normal traffic
-- ✅ **0% false positives** with fuzzing-only rules baseline
-- ✅ **~370 msg/s throughput** with hybrid detection
-- ✅ **Consistent performance** across multiple datasets
+**Key Claims Proven (Updated January 5, 2026):**
+- ✅ **90-99% attack recall** (Fuzzing: 95.64%, DoS: 99.91%)
+- ✅ **Complete metrics:** TP/FP/TN/FN, Precision, Recall, F1-Score
+- ✅ **System performance:** 332-376 msg/s, 201-252 MB RAM, 48-51°C
+- ⚠️ **17.6-31.7% false positive rate** on normal traffic (above 10% target)
+- 🚨 **Dataset quality issues discovered:** Accessory datasets invalid, RPM/Force-Neutral/Standstill severely imbalanced
+
+**Critical Finding (Jan 5):** Several datasets have severe quality issues that invalidate previous assumptions. Only Fuzzing, DoS, Interval, and Normal traffic datasets have reliable labels for validation.
 
 ---
 
@@ -31,8 +36,19 @@ This document provides **verifiable evidence** of the CAN-IDS detection system's
 CANBUS_IDS/
 ├── logs/                           # Timestamped execution logs
 │   ├── dec27_enhanced_hybrid.log   # PRIMARY EVIDENCE: 98.9% DoS detection
-│   ├── dec27_test5_full_pipeline.log
+│   ├── full_pipeline_complete_jan5.log  # ⭐ COMPLETE METRICS (160K msgs)
+│   ├── full_pipeline_metrics_jan4.log
 │   └── [23 additional test logs]
+│
+├── docs/                           # Analysis and evidence documentation
+│   ├── COMPREHENSIVE_METRICS_REPORT.md  # ⭐ COMPLETE ANALYSIS (Jan 5)
+│   ├── PROOF_OF_RESULTS.md        # This document
+│   └── GAP_ANALYSIS.md            # Coverage analysis
+│
+├── GAP_Analysis/                   # Testing gap analysis and rebuttals
+│   ├── REBUTTAL_TO_GAP_ANALYSIS.md  # ⭐ v2.0 with complete metrics
+│   ├── METRICS_RECOVERY_PLAN.md   # Recovery methodology
+│   └── Testing Documentation Gap Analysis
 │
 ├── test_results/                   # Structured JSON/CSV outputs
 │   ├── DEC27_TEST_SUMMARY.md      # Comprehensive test summary
@@ -40,22 +56,34 @@ CANBUS_IDS/
 │   └── [27 timestamped test directories with JSON metrics]
 │
 ├── test_data/                      # Attack datasets (565MB total)
-│   ├── DoS-1.csv                  # 90,169 messages, 10.1% attack
-│   ├── DoS-2.csv                  # 324,870 messages
-│   ├── fuzzing-1.csv              # 1,235,992 messages, 9.2% attack
-│   ├── interval-1.csv             # 634,191 messages, 2.4% attack
-│   ├── attack-free-1.csv          # 1,952,833 messages (normal)
-│   └── [11 additional datasets]
+│   ├── DoS-1.csv                  # 90,169 messages, 10.1% attack ✅
+│   ├── DoS-2.csv                  # 324,870 messages ✅
+│   ├── fuzzing-1.csv              # 1,235,992 messages, 9.2% attack ✅
+│   ├── fuzzing-2.csv              # ✅ Validated
+│   ├── interval-1.csv             # 634,191 messages, 2.4% attack ✅
+│   ├── interval-2.csv             # ⚠️ Only 3 attacks (imbalanced)
+│   ├── rpm-1.csv, rpm-2.csv       # 🚨 <0.5% attacks (unreliable)
+│   ├── accessory-1.csv, accessory-2.csv  # 🚨 INVALID (zero attacks)
+│   ├── force-neutral-1.csv, force-neutral-2.csv  # 🚨 <1% attacks
+│   ├── standstill-1.csv, standstill-2.csv  # 🚨 <0.2% attacks
+│   ├── attack-free-1.csv          # 1,952,833 messages (normal) ✅
+│   ├── attack-free-2.csv          # ✅ Validated
+│   └── [16 total datasets]
 │
 ├── scripts/                        # Reproducible test scripts
-│   ├── test_full_pipeline.py      # Enhanced hybrid testing
+│   ├── test_full_pipeline.py      # ⭐ Enhanced with TP/FP/TN/FN + resources
 │   ├── test_real_attacks.py       # Decision tree validation
 │   └── comprehensive_test.py      # Full system testing
 │
-└── docs/
-    ├── GAP_ANALYSIS.md            # Complete analysis
-    └── PROOF_OF_RESULTS.md        # This document
+└── config/
+    ├── rules_fuzzing_only.yaml    # 4 fuzzing detection rules
+    └── data/models/decision_tree.pkl  # ML model (175.7 KB)
 ```
+
+**⭐ Key Artifacts (January 5, 2026):**
+- `full_pipeline_complete_jan5.log` - Complete test run, 160,000 messages
+- `docs/COMPREHENSIVE_METRICS_REPORT.md` - Full analysis with dataset quality issues
+- `GAP_Analysis/REBUTTAL_TO_GAP_ANALYSIS.md` v2.0 - Complete metrics recovery documentation
 
 ---
 
@@ -547,14 +575,96 @@ Researchers or reviewers can fully reproduce these results by:
 
 ---
 
-**Document Version:** 1.1  
-**Last Updated:** January 4, 2026  
+**Document Version:** 2.0  
+**Last Updated:** January 5, 2026  
 **Author:** CAN-IDS Project Team  
 **License:** MIT (see repository for details)
 
 ---
 
 ## Update Log
+
+### January 5, 2026 - Complete Metrics Recovery ⭐
+
+**Purpose:** Recover all missing detection performance metrics and analyze dataset quality.
+
+**Test Executed:** Enhanced Hybrid Pipeline with Complete Metrics (`scripts/test_full_pipeline.py`)
+- **Log File:** `full_pipeline_complete_jan5.log` ⭐ **PRIMARY EVIDENCE**
+- **Test Date:** 2026-01-05 00:12:37 - 00:22:33
+- **Duration:** ~10 minutes (160,000 messages tested)
+- **Datasets:** All 16 attack datasets (DoS, Fuzzing, Interval, RPM, Accessory, Force-Neutral, Standstill, Normal)
+- **Configuration:** 
+  - Stage 2: Fuzzing-only rules (`config/rules_fuzzing_only.yaml` - 4 rules)
+  - Stage 3: Decision Tree ML (`data/models/decision_tree.pkl` - 175.7 KB, depth 12, 1112 leaves)
+
+**Enhanced Metrics Captured:**
+- ✅ TP/FP/TN/FN confusion matrices for all datasets
+- ✅ Precision, Recall, F1-Score calculations
+- ✅ CPU usage monitoring (average & peak)
+- ✅ RAM usage monitoring (average & peak)
+- ✅ Temperature monitoring (average & peak)
+- ✅ Real-time throughput tracking
+- ✅ Per-message latency calculation
+
+**Results Summary (Validated Datasets Only):**
+
+| Attack Type | Recall | Precision | F1-Score | TP | FP | Dataset Quality |
+|-------------|--------|-----------|----------|-----|-----|----------------|
+| **Fuzzing-1** | **95.64%** | 15.45% | 0.2660 | 878 | 4,805 | ✅ Valid (9.2% attacks) |
+| **Fuzzing-2** | **90.91%** | 0.91% | 0.0181 | 50 | 5,434 | ✅ Valid (0.5% attacks) |
+| **DoS-1** | **99.91%** | 10.64% | 0.1923 | 1,056 | 8,870 | ✅ Valid (10.6% attacks) |
+| **DoS-2** | **99.64%** | 8.51% | 0.1568 | 838 | 9,009 | ✅ Valid (8.4% attacks) |
+| **Interval-1** | 88.26% | 2.63% | 0.0511 | 233 | 8,630 | ⚠️ Fair (2.6% attacks) |
+| **Normal-1 (FP)** | N/A | N/A | N/A | 0 | 1,764 | ✅ Valid (17.6% FP) |
+| **Normal-2 (FP)** | N/A | N/A | N/A | 0 | 3,173 | ✅ Valid (31.7% FP) |
+
+**System Performance (All Tests):**
+
+| Metric | Average | Peak | Status |
+|--------|---------|------|--------|
+| CPU Usage | 95.9-98.1% | 101.7-102.0% | ⚠️ Near saturation |
+| RAM Usage | 201-252 MB | 201-252 MB | ✅ Excellent |
+| Temperature | 48-51°C | 49-53°C | ✅ Safe range |
+| Throughput | 332-376 msg/s | N/A | ✅ Real-time capable |
+| Latency | 2.66-3.01 ms/msg | N/A | ✅ Low latency |
+
+**🚨 Critical Dataset Quality Issues Discovered:**
+
+**INVALID Datasets (Cannot Use for Validation):**
+- **Accessory-1, Accessory-2:** TP=0, FN=0 → **Zero attacks in dataset** (100% normal traffic mislabeled)
+  - Previous "98% detection" claim is **FALSE** (all detections were false positives)
+  
+**SEVERELY IMBALANCED Datasets (Unreliable Metrics):**
+- **RPM-1:** 37 attacks / 10,000 msgs (0.37%) → Precision 0.46%
+- **RPM-2:** 5 attacks / 10,000 msgs (0.05%) → Precision 0.04%
+- **Force-Neutral-1:** 100 attacks / 10,000 msgs (1.0%) → Precision 1.44%
+- **Force-Neutral-2:** 7 attacks / 10,000 msgs (0.07%) → Precision 0.03%
+- **Standstill-1:** 11 attacks / 10,000 msgs (0.11%) → Precision 0.16%
+- **Standstill-2:** 8 attacks / 10,000 msgs (0.08%) → Precision 0.15%
+- **Interval-2:** 3 attacks / 10,000 msgs (0.03%) → Precision 0.05%
+
+**Impact on Research Claims:**
+- ❌ Cannot claim accessory attack detection (datasets have no attacks)
+- ❌ Cannot claim RPM detection accuracy (only 2-37 attack samples)
+- ❌ Cannot claim Force-Neutral/Standstill validation (extreme imbalance)
+- ✅ CAN claim Fuzzing detection: 90.91-95.64% recall (validated)
+- ✅ CAN claim DoS detection: 99.64-99.91% recall (validated)
+- ⚠️ Must acknowledge 17.6-31.7% FP rate (above 10% target)
+
+**Documentation Generated:**
+- `docs/COMPREHENSIVE_METRICS_REPORT.md` - Complete 408-line analysis with dataset quality assessment
+- `GAP_Analysis/REBUTTAL_TO_GAP_ANALYSIS.md` v2.0 - Updated with complete metrics findings
+- `GAP_Analysis/METRICS_RECOVERY_PLAN.md` - Recovery methodology documentation
+
+**Verification Status:** ✅ **COMPLETE** - All metrics recovered, dataset quality issues identified
+
+**Next Actions Required:**
+1. Discard or re-label accessory datasets (invalid)
+2. Create balanced datasets for RPM/Force-Neutral/Standstill (need >1,000 attack samples)
+3. Update research claims to focus on validated datasets only
+4. Address high FP rate (17.6-31.7%, target <10%)
+
+---
 
 ### January 4, 2026 - Verification Test
 
