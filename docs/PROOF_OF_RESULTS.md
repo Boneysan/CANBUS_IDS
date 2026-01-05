@@ -547,7 +547,43 @@ Researchers or reviewers can fully reproduce these results by:
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** January 3, 2026  
+**Document Version:** 1.1  
+**Last Updated:** January 4, 2026  
 **Author:** CAN-IDS Project Team  
 **License:** MIT (see repository for details)
+
+---
+
+## Update Log
+
+### January 4, 2026 - Verification Test
+
+**Purpose:** Verify that December 27th results remain valid and system is functioning correctly.
+
+**Test Executed:** Enhanced Hybrid Pipeline (`scripts/test_full_pipeline.py`)
+- **Log File:** `full_pipeline_test_jan4.log`
+- **Test Date:** 2026-01-04 23:25:27
+- **Duration:** ~2.5 minutes (40,000 messages)
+- **Configuration:** 
+  - Stage 2: Fuzzing-only rules (`config/rules_fuzzing_only.yaml`)
+  - Stage 3: Decision Tree ML (`data/models/decision_tree.pkl`)
+
+**Results Summary:**
+
+| Dataset | Detection Rate | Stage 2 (Rules) | Stage 3 (ML) | Throughput |
+|---------|---------------|-----------------|--------------|------------|
+| DoS-1 | 98.9% (9,890/10,000) | 0 | 9,890 | 370 msg/s |
+| DoS-2 | 97.8% (9,782/10,000) | 0 | 9,782 | 344 msg/s |
+| Normal-1 (FP) | 15.3% (1,529/10,000) | 0 | 1,529 | 373 msg/s |
+| Normal-2 (FP) | 31.1% (3,105/10,000) | 0 | 3,105 | 343 msg/s |
+
+**Findings:**
+- ✅ **DoS detection confirmed:** 98.9% and 97.8% match December 27th results
+- ✅ **FP rate confirmed:** 15.3% and 31.1% consistent with previous testing
+- ✅ **Throughput confirmed:** ~360 msg/s average (within expected range)
+- ✅ **System stable:** No performance degradation since December 27th
+- ℹ️ **Stage 2 inactive:** Fuzzing rules didn't trigger on DoS attacks (expected behavior)
+
+**Verification Status:** ✅ **PASSED** - December 27, 2025 results remain accurate and reproducible.
+
+**Next Phase:** Gap analysis identified missing test coverage for RPM, Accessory, Force-Neutral, and Standstill attack types (datasets exist in `test_data/` but not yet tested with current pipeline).

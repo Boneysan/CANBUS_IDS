@@ -8,12 +8,14 @@ Tests the complete detection system:
 - Stage 3: ML Decision Tree
 
 Measures improvement in fuzzing detection after adding payload rules.
+Monitors system resources: CPU, RAM, temperature, message throughput.
 """
 
 import sys
 import time
 import logging
 import pandas as pd
+import psutil
 from pathlib import Path
 from typing import Dict, List
 from collections import defaultdict
@@ -76,9 +78,16 @@ class FullPipelineDetector:
 
 
 def load_and_test(detector: FullPipelineDetector, filepath: Path, max_samples: int = 10000) -> Dict:
-    """Load data and test full pipeline."""
+    """Load data and test full pipeline with system resource monitoring."""
     logger.info(f"\nTesting: {filepath.name}")
     logger.info("=" * 80)
+    
+    # Initialize system monitoring
+    process = psutil.Process()
+    cpu_samples = []
+    ram_samples = []
+    temp_available = hasattr(psutil, 'sensors_temperatures')
+    temp_samples = []
     
     # Load data
     df = pd.read_csv(filepath)
@@ -87,9 +96,19 @@ def load_and_test(detector: FullPipelineDetector, filepath: Path, max_samples: i
     
     logger.info(f"Samples: {len(df)}")
     
+    # Check if ground truth labels exist
+    has_labels = 'attack' in df.columns or 'Attack' in df.columns
+    ground_truth = []
+    
     # Convert to messages
     messages = []
     for idx, row in df.iterrows():
+        # Get ground truth if available
+        if has_labels:
+            is_attack = int(row.get('attack', row.get('Attack', 0))) == 1
+            ground_truth.append(is_attack)
+        
+        # Convert row to message format
         if 'data_field' in row:
             data_str = str(row['data_field']).replace(' ', '')
             if len(data_str) >= 16:
@@ -120,23 +139,83 @@ def load_and_test(detector: FullPipelineDetector, filepath: Path, max_samples: i
         }
         messages.append(message)
     
-    # Test pipeline
+    # Test pipeline with resource monitoring
     detections_by_stage = {2: 0, 3: 0}
-    total_detections = 0
+    predictions = []
     
     start_time = time.time()
+    last_monitor_time = start_time
+    monitor_interval = 0.5  # Monitor every 0.5 seconds
     
-    for message in messages:
+    for i, message in enumerate(messages):
         result = detector.analyze(message)
-        if result['detected']:
-            total_detections += 1
+        detected = result['detected']
+        predictions.append(detected)
+        
+        if detected:
             stage = result['stage']
             detections_by_stage[stage] += 1
+        
+        # Sample system resources periodically
+        current_time = time.time()
+        if current_time - last_monitor_time >= monitor_interval:
+            cpu_samples.append(process.cpu_percent(interval=None))
+            ram_samples.append(process.memory_info().rss / 1024 / 1024)  # MB
+            
+            # Get CPU temperature if available
+            if temp_available:
+                try:
+                    temps = psutil.sensors_temperatures()
+                    if 'coretemp' in temps:
+                        temp_samples.append(temps['coretemp'][0].current)
+                    elif 'cpu_thermal' in temps:  # Raspberry Pi
+                        temp_samples.append(temps['cpu_thermal'][0].current)
+                except:
+                    pass
+            
+            last_monitor_time = current_time
     
     elapsed = time.time() - start_time
     throughput = len(messages) / elapsed if elapsed > 0 else 0
     
+    total_detections = sum(predictions)
     detection_rate = total_detections / len(messages) * 100
+    
+    # Calculate resource statistics
+    resource_stats = {
+        'cpu_avg': sum(cpu_samples) / len(cpu_samples) if cpu_samples else 0,
+        'cpu_max': max(cpu_samples) if cpu_samples else 0,
+        'ram_avg_mb': sum(ram_samples) / len(ram_samples) if ram_samples else 0,
+        'ram_max_mb': max(ram_samples) if ram_samples else 0,
+        'temp_avg_c': sum(temp_samples) / len(temp_samples) if temp_samples else 0,
+        'temp_max_c': max(temp_samples) if temp_samples else 0,
+        'processing_time_sec': elapsed,
+        'throughput_msg_per_sec': throughput
+    }
+    
+    # Calculate performance metrics if ground truth available
+    metrics = {}
+    if has_labels:
+        true_positives = sum(1 for gt, pred in zip(ground_truth, predictions) if gt and pred)
+        false_positives = sum(1 for gt, pred in zip(ground_truth, predictions) if not gt and pred)
+        true_negatives = sum(1 for gt, pred in zip(ground_truth, predictions) if not gt and not pred)
+        false_negatives = sum(1 for gt, pred in zip(ground_truth, predictions) if gt and not pred)
+        
+        precision = true_positives / max(true_positives + false_positives, 1)
+        recall = true_positives / max(true_positives + false_negatives, 1)
+        f1_score = 2 * (precision * recall) / max(precision + recall, 0.001)
+        accuracy = (true_positives + true_negatives) / len(messages)
+        
+        metrics = {
+            'true_positives': true_positives,
+            'false_positives': false_positives,
+            'true_negatives': true_negatives,
+            'false_negatives': false_negatives,
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1_score,
+            'accuracy': accuracy
+        }
     
     logger.info(f"\nResults:")
     logger.info(f"  Total detections: {total_detections}/{len(messages)} ({detection_rate:.1f}%)")
@@ -144,36 +223,51 @@ def load_and_test(detector: FullPipelineDetector, filepath: Path, max_samples: i
     logger.info(f"  Stage 3 (ML):     {detections_by_stage[3]} ({detections_by_stage[3]/len(messages)*100:.1f}%)")
     logger.info(f"  Throughput: {throughput:.0f} msg/s")
     
+    if metrics:
+        logger.info(f"\n  Detection Metrics:")
+        logger.info(f"    TP: {metrics['true_positives']:,} | FP: {metrics['false_positives']:,} | TN: {metrics['true_negatives']:,} | FN: {metrics['false_negatives']:,}")
+        logger.info(f"    Precision: {metrics['precision']*100:.2f}% | Recall: {metrics['recall']*100:.2f}% | F1: {metrics['f1_score']:.4f}")
+        logger.info(f"    Accuracy: {metrics['accuracy']*100:.2f}%")
+    
+    logger.info(f"\n  System Resources:")
+    logger.info(f"    CPU: {resource_stats['cpu_avg']:.1f}% avg, {resource_stats['cpu_max']:.1f}% peak")
+    logger.info(f"    RAM: {resource_stats['ram_avg_mb']:.1f} MB avg, {resource_stats['ram_max_mb']:.1f} MB peak")
+    if resource_stats['temp_avg_c'] > 0:
+        logger.info(f"    Temperature: {resource_stats['temp_avg_c']:.1f}°C avg, {resource_stats['temp_max_c']:.1f}°C peak")
+    logger.info(f"    Processing time: {resource_stats['processing_time_sec']:.2f}s")
+    
     return {
         'total_detections': total_detections,
         'total_messages': len(messages),
         'detection_rate': detection_rate,
         'stage2': detections_by_stage[2],
         'stage3': detections_by_stage[3],
-        'throughput': throughput
+        'throughput': throughput,
+        **metrics,  # Include all calculated metrics
+        **resource_stats  # Include resource statistics
     }
 
 
 def main():
-    """Test full pipeline on Vehicle_Models data."""
-    # Try multiple possible locations for Vehicle_Models
+    """Test full pipeline on test_data or Vehicle_Models data."""
+    # Try multiple possible locations for data
     possible_paths = [
-        Path("../Vehicle_Models"),
-        Path.home() / "Documents" / "GitHub" / "Vehicle_Models",
-        Path("/media/boneysan/Data/GitHub/Vehicle_Models")
+        Path("test_data"),  # Local test_data directory (PREFERRED)
+        Path("../Vehicle_Models/data/raw"),
+        Path.home() / "Documents" / "GitHub" / "Vehicle_Models" / "data" / "raw",
+        Path("/media/boneysan/Data/GitHub/Vehicle_Models/data/raw")
     ]
     
-    vehicle_models_path = None
+    data_path = None
     for path in possible_paths:
         if path.exists():
-            vehicle_models_path = path
+            data_path = path
+            logger.info(f"Using data from: {path}")
             break
     
-    if vehicle_models_path is None:
-        logger.error(f"Vehicle_Models not found in any of: {possible_paths}")
+    if data_path is None:
+        logger.error(f"Data not found in any of: {possible_paths}")
         return
-    
-    raw_data_path = vehicle_models_path / 'data' / 'raw'
     
     # Initialize full pipeline
     logger.info("Initializing 2-stage detection pipeline...")
@@ -193,6 +287,14 @@ def main():
         ('DoS-2.csv', 'DoS Attack (Set 2)', True),
         ('interval-1.csv', 'Interval Timing (Set 1)', True),
         ('interval-2.csv', 'Interval Timing (Set 2)', True),
+        ('rpm-1.csv', 'RPM Attack (Set 1)', True),
+        ('rpm-2.csv', 'RPM Attack (Set 2)', True),
+        ('accessory-1.csv', 'Accessory Attack (Set 1)', True),
+        ('accessory-2.csv', 'Accessory Attack (Set 2)', True),
+        ('force-neutral-1.csv', 'Force Neutral Attack (Set 1)', True),
+        ('force-neutral-2.csv', 'Force Neutral Attack (Set 2)', True),
+        ('standstill-1.csv', 'Standstill Attack (Set 1)', True),
+        ('standstill-2.csv', 'Standstill Attack (Set 2)', True),
         ('attack-free-1.csv', 'Normal Traffic (Set 1)', False),
         ('attack-free-2.csv', 'Normal Traffic (Set 2)', False),
     ]
@@ -200,7 +302,7 @@ def main():
     results = {}
     
     for filename, name, is_attack in datasets:
-        filepath = raw_data_path / filename
+        filepath = data_path / filename
         if not filepath.exists():
             logger.warning(f"Skipping {filename} - not found")
             continue
