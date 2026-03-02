@@ -153,8 +153,8 @@ sudo nano /boot/config.txt
 sudo reboot
 
 # 6. Clone repository
-git clone https://github.com/yourusername/can-ids.git
-cd can-ids
+git clone https://github.com/Boneysan/CANBUS_IDS.git
+cd CANBUS_IDS
 
 # 7. Create virtual environment
 python3 -m venv venv
@@ -343,7 +343,7 @@ Implementation of per-CAN-ID adaptive timing thresholds for improved detection a
 - Jitter compensation: adjusts sensitivity based on natural timing variance
 - Windowed detection: tolerates occasional normal messages during sustained attacks
 
-**Current Status:** Dual-sigma implementation complete. 94.81% recall, 23% FPR. Next: test on DoS attacks, consider consecutive_required tuning.
+**Current Status:** Three-tier detection system complete (Dec 14, 2025). **94.76% recall, 8.43% FPR** — 90+ percentage point improvement from baseline. See Tier 3 section above for details.
 
 --- Performance Optimization for High-Throughput
 

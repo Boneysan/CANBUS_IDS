@@ -1,82 +1,89 @@
 # Getting Started with CAN-IDS
 
-Welcome to CAN-IDS! This guide will help you get up and running quickly.
+**Last Updated**: March 1, 2026
+
+This guide walks you through installation, first run on virtual CAN, and Raspberry Pi 4 deployment. Every command in this guide has been verified against the current codebase.
+
+---
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Installation](#installation)
+3. [Quick Test with Virtual CAN](#quick-test-with-virtual-can)
+4. [Understanding the 3-Stage Pipeline](#understanding-the-3-stage-pipeline)
+5. [Training the Decision Tree (Optional)](#training-the-decision-tree-optional)
+6. [Generating Vehicle-Specific Rules](#generating-vehicle-specific-rules)
+7. [Analyzing Captured Traffic](#analyzing-captured-traffic)
+8. [Raspberry Pi 4 Deployment](#raspberry-pi-4-deployment)
+9. [Understanding Output](#understanding-output)
+10. [Next Steps](#next-steps)
+11. [Troubleshooting](#troubleshooting)
+
+---
 
 ## Prerequisites
 
 ### Hardware
-- Linux system with kernel 2.6.25+ (for SocketCAN)
-- OR Raspberry Pi 4 (2GB+ RAM recommended)
-- CAN interface hardware:
-  - MCP2515 CAN HAT for Raspberry Pi
-  - USB-to-CAN adapter (PCAN, CANtact, SLCAN)
-  - PiCAN shield
-- CAN bus network to monitor
+
+- **Desktop/Laptop**: Linux with kernel 2.6.25+ (for SocketCAN) — or any OS for offline analysis
+- **Raspberry Pi 4**: 2 GB+ RAM recommended
+- **CAN hardware** (for real vehicles): MCP2515 HAT, USB-to-CAN adapter (PCAN, CANtact, SLCAN), or PiCAN shield
 
 ### Software
-- Python 3.8 or higher
+
+- Python 3.8+
 - Git
-- Virtual environment support
+- `can-utils` (Linux, for virtual CAN and `candump`/`cansend`)
+
+---
 
 ## Installation
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/can-ids.git
-cd can-ids
+git clone https://github.com/Boneysan/CANBUS_IDS.git
+cd CANBUS_IDS
 ```
 
-### 2. Create Virtual Environment
+### 2. Create and Activate Virtual Environment
 
 ```bash
-# Create virtual environment
 python3 -m venv venv
-
-# Activate (Linux/Mac)
 source venv/bin/activate
-
-# Activate (Windows)
-venv\Scripts\activate
 ```
 
 ### 3. Install Dependencies
 
 ```bash
-# Upgrade pip
 pip install --upgrade pip
-
-# Install requirements
 pip install -r requirements.txt
-
-# Install CAN-IDS in development mode
 pip install -e .
 ```
 
 ### 4. Verify Installation
 
 ```bash
-# Check Python version
-python --version  # Should be 3.8+
-
-# Test import
-python -c "from src.capture import CANSniffer; print('OK')"
-
-# View help
-python main.py --help
+python --version          # Should be 3.8+
+python main.py --version  # Should print CAN-IDS 1.0.0
+python main.py --help     # Show all CLI options
 ```
+
+---
 
 ## Quick Test with Virtual CAN
 
-Before connecting to real hardware, test with a virtual CAN interface:
+No CAN hardware needed — test the full pipeline on a virtual interface.
 
-### 1. Setup Virtual CAN (Linux)
+### 1. Set Up Virtual CAN
 
 ```bash
-# Load vcan kernel module
-sudo modprobe vcan
+# Install can-utils
+sudo apt-get install -y can-utils
 
 # Create virtual CAN interface
+sudo modprobe vcan
 sudo ip link add dev vcan0 type vcan
 sudo ip link set up vcan0
 
@@ -84,88 +91,228 @@ sudo ip link set up vcan0
 ip link show vcan0
 ```
 
-### 2. Generate Test Traffic
+### 2. Generate Test Traffic (Terminal 1)
 
-In one terminal, generate CAN messages:
+Open a terminal and send CAN messages in a loop:
 
 ```bash
-# Install can-utils if not already installed
-sudo apt-get install can-utils
-
-# Send random CAN messages
+# Normal traffic + a simulated attack burst
 while true; do
-    cansend vcan0 123#DEADBEEF
-    sleep 0.1
+    cansend vcan0 316#$(openssl rand -hex 8)   # Simulated engine data
+    cansend vcan0 0C6#$(openssl rand -hex 8)   # Simulated steering
+    sleep 0.01
 done
 ```
 
-### 3. Run CAN-IDS
-
-In another terminal:
+### 3. Run CAN-IDS (Terminal 2)
 
 ```bash
-# Monitor virtual CAN interface
+cd CANBUS_IDS
+source venv/bin/activate
 python main.py -i vcan0
-
-# You should see alerts for the test messages
 ```
 
-### 4. Stop Test
+You should see:
+- Component initialization messages (rule engine, pre-filter)
+- Alerts when test traffic triggers rules
+- Press `Ctrl+C` to stop and see runtime statistics
 
-Press `Ctrl+C` to stop CAN-IDS. It will display statistics before exiting.
-
-## Raspberry Pi 4 Setup
-
-### 1. Prepare Raspberry Pi
+### 4. Try Different Log Levels
 
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
+python main.py -i vcan0 --log-level DEBUG    # Verbose output
+python main.py -i vcan0 --log-level WARNING  # Alerts only
+```
 
-# Install dependencies
+---
+
+## Understanding the 3-Stage Pipeline
+
+CAN-IDS uses a hierarchical detection architecture:
+
+```
+Every CAN Message
+        │
+   Stage 1: Fast Pre-Filter
+        │  Filters 80–95% of known-benign traffic
+        │  Config: prefilter.enabled (default: true)
+        │
+   Stage 2: Rule Engine
+        │  18 rule types (pattern, timing, frequency, etc.)
+        │  Config: detection_modes: [rule_based]
+        │
+   Stage 3: Decision Tree ML (optional)
+        │  Lightweight classifier on suspicious messages only
+        │  Config: decision_tree.enabled (default: true)
+        │  Requires: data/models/decision_tree.pkl (train locally)
+        │
+   Alert Manager → logs/alerts.json + console
+```
+
+**Out of the box**, Stages 1+2 are fully active. Stage 3 requires training the Decision Tree model (see below). Without it, Stage 3 simply doesn't run — detection still works via Stages 1+2.
+
+---
+
+## Training the Decision Tree (Optional)
+
+Stage 3 adds an ML classifier that processes messages still suspicious after Stages 1+2. The model is not shipped in the repo because it should be trained on data representative of your target environment.
+
+### Quick Start (Synthetic Data)
+
+```bash
+python scripts/train_decision_tree.py --synthetic
+```
+
+This creates:
+- `data/models/decision_tree.pkl` — the trained model
+- `data/models/decision_tree_rules.txt` — human-readable tree rules
+
+### Train from Real Data
+
+If you have the Vehicle_Models dataset or similar labeled CAN data:
+
+```bash
+python scripts/train_decision_tree.py --vehicle-models /path/to/Vehicle_Models
+```
+
+### Train from the Bundled Test Data
+
+The `test_data/` directory includes 16 labeled CSV files (attack-free, DoS, fuzzing, etc.):
+
+```bash
+python scripts/train_decision_tree.py \
+  --vehicle-models . \
+  --output data/models/decision_tree.pkl
+```
+
+### Verify Stage 3 is Active
+
+After training, restart CAN-IDS. Look for this log line:
+
+```
+✅ STAGE 3 ML DETECTION ENABLED
+```
+
+If you see `Stage 3 ML DETECTION INITIALIZATION FAILED`, the model file is missing or corrupt.
+
+---
+
+## Generating Vehicle-Specific Rules
+
+The default rules use generic thresholds that work for testing but cause false positives on real vehicles. Generate tuned rules from baseline (attack-free) traffic:
+
+### From Bundled Test Data
+
+```bash
+python scripts/generate_rules_from_baseline.py \
+  --input test_data/attack-free-1.csv test_data/attack-free-2.csv \
+  --output config/rules_my_vehicle.yaml
+```
+
+### From Your Own Captures
+
+```bash
+# 1. Capture normal traffic (let run for 10+ minutes on a real vehicle)
+candump -l can0
+
+# 2. Convert candump log to CSV
+python scripts/convert_candump.py candump-*.log data/raw/baseline.csv
+
+# 3. Generate tuned rules
+python scripts/generate_rules_from_baseline.py \
+  --input data/raw/baseline.csv \
+  --output config/rules_my_vehicle.yaml
+
+# 4. Use the tuned rules
+python main.py -i can0 --config config/can_ids.yaml
+# (edit config to set rules_file: config/rules_my_vehicle.yaml)
+```
+
+---
+
+## Analyzing Captured Traffic
+
+You don't need a live CAN bus to use CAN-IDS. Replay captured traffic:
+
+```bash
+# Replay a candump log file
+python main.py --mode replay --file data/raw/traffic.log
+
+# Replay with a specific config
+python main.py --mode replay --file data/raw/traffic.log --config config/can_ids_rpi4.yaml
+```
+
+### Test Against the Bundled Datasets
+
+The `test_data/` directory contains 16 labeled CSV files from real vehicle CAN traffic:
+
+| Dataset | File | Messages |
+|---------|------|----------|
+| Attack-free | `attack-free-1.csv`, `attack-free-2.csv` | Normal driving traffic |
+| DoS | `DoS-1.csv`, `DoS-2.csv` | Denial of service attack |
+| Fuzzing | `fuzzing-1.csv`, `fuzzing-2.csv` | Random CAN message fuzzing |
+| RPM | `rpm-1.csv`, `rpm-2.csv` | Engine RPM manipulation |
+| Interval | `interval-1.csv`, `interval-2.csv` | Timing manipulation |
+| Force neutral | `force-neutral-1.csv`, `force-neutral-2.csv` | Gear forcing |
+| Standstill | `standstill-1.csv`, `standstill-2.csv` | Forced standstill |
+| Accessory | `accessory-1.csv`, `accessory-2.csv` | Accessory manipulation |
+
+Run the rule-testing script against all of them:
+
+```bash
+python scripts/test_rules_on_dataset.py --rules config/rules_adaptive.yaml --data test_data/DoS-1.csv
+```
+
+---
+
+## Raspberry Pi 4 Deployment
+
+### 1. Prepare the Pi
+
+```bash
+sudo apt update && sudo apt upgrade -y
 sudo apt install python3 python3-pip python3-venv can-utils git -y
 ```
 
-### 2. Setup CAN Hardware
+### 2. Clone and Install
+
+```bash
+git clone https://github.com/Boneysan/CANBUS_IDS.git
+cd CANBUS_IDS
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
+```
+
+### 3. Set Up CAN Hardware
 
 For MCP2515 CAN HAT:
 
 ```bash
-# Run setup script
 sudo bash raspberry-pi/scripts/setup_mcp2515.sh
-
-# Reboot
 sudo reboot
 ```
 
-After reboot, verify CAN interface:
+After reboot:
 
 ```bash
-# Check interface
-ip link show can0
-
-# Should show: can0: <NOARP,ECHO> mtu 16 qdisc noop state DOWN mode DEFAULT
-```
-
-### 3. Configure CAN Interface
-
-```bash
-# Setup CAN0 with 500kbps bitrate
+# Configure CAN interface (500 kbps is typical for OBD-II)
 sudo bash raspberry-pi/scripts/setup_can_interface.sh can0 500000
 
 # Verify
 ip -details link show can0
+candump can0   # Should show traffic if bus is connected
 ```
 
-### 4. Test with Real CAN Bus
+### 4. Run with Pi-Optimized Config
 
 ```bash
-# Monitor CAN traffic
-candump can0
-
-# In another terminal, run CAN-IDS
 python main.py -i can0 --config config/can_ids_rpi4.yaml
 ```
+
+The Pi config reduces buffer sizes, limits threads, and manages thermal throttling.
 
 ### 5. Install as System Service
 
@@ -173,7 +320,7 @@ python main.py -i can0 --config config/can_ids_rpi4.yaml
 # Copy service file
 sudo cp raspberry-pi/systemd/can-ids.service /etc/systemd/system/
 
-# Edit paths if needed
+# Edit paths if your install directory differs
 sudo nano /etc/systemd/system/can-ids.service
 
 # Enable and start
@@ -184,229 +331,141 @@ sudo systemctl start can-ids.service
 # Check status
 sudo systemctl status can-ids.service
 
-# View logs
+# Follow logs
 sudo journalctl -u can-ids.service -f
 ```
 
-## Configuration
-
-### Basic Configuration
-
-Edit `config/can_ids.yaml`:
-
-```yaml
-# CAN interface
-interface: can0
-bustype: socketcan
-
-# Detection modes
-detection_modes:
-  - rule_based
-  - ml_based  # Requires trained model
-
-# Alert settings
-alerts:
-  log_file: logs/alerts.json
-  console_output: true
-  rate_limit: 10
-```
-
-### Customizing Detection Rules
-
-Edit `config/rules.yaml` to add your own detection rules:
-
-```yaml
-rules:
-  - name: "My Custom Rule"
-    can_id: 0x123
-    max_frequency: 100
-    time_window: 1
-    severity: HIGH
-    description: "Custom frequency check"
-    action: alert
-```
-
-See `config/example_rules.yaml` for more examples.
-
-## Analyzing PCAP Files
-
-If you have captured CAN traffic as PCAP:
-
-```bash
-# Analyze PCAP file
-python main.py --mode replay --file path/to/capture.pcap
-
-# With custom configuration
-python main.py --mode replay --file capture.pcap --config config/can_ids_rpi4.yaml
-```
-
-## Training ML Models
-
-To use ML-based detection, you need to train a model:
-
-```bash
-# 1. Collect baseline normal traffic
-candump -l can0  # Let run for 24-48 hours
-
-# 2. Convert to CSV (script to be created)
-python scripts/convert_candump.py candump-*.log data/raw/baseline.csv
-
-# 3. Train model (module to be created)
-python -m src.models.train_model \
-    --input data/raw/baseline.csv \
-    --output data/models/my_model.pkl \
-    --contamination 0.02
-
-# 4. Use the model
-python main.py -i can0 --model data/models/my_model.pkl
-```
+---
 
 ## Understanding Output
 
 ### Console Output
 
 ```
-[2025-01-20 10:30:45] [HIGH] [RULE_ENGINE] CAN ID: 0x123 | Rule: High Frequency Attack | Description: Possible denial of service attack
+[2026-03-01 10:30:45] [HIGH] [RULE_ENGINE] CAN ID: 0x7E0 | Rule: DoS Attack | Description: Excessive messages targeting engine ECU
 ```
 
-### JSON Alerts
-
-Check `logs/alerts.json` for structured alert data:
+### JSON Alert Log (`logs/alerts.json`)
 
 ```json
 {
-  "timestamp": 1705747845.123,
+  "timestamp": 1740825045.123,
   "severity": "HIGH",
-  "rule_name": "High Frequency Attack",
-  "can_id": "0x123",
-  "description": "Possible denial of service attack",
-  "confidence": 0.95
+  "rule_name": "DoS Attack",
+  "can_id": "0x7E0",
+  "description": "Excessive messages targeting engine ECU",
+  "confidence": 0.95,
+  "source": "rule_engine"
 }
 ```
 
-### Statistics
+### Shutdown Statistics
 
-Press `Ctrl+C` to see runtime statistics:
+Press `Ctrl+C` for a summary:
 
 ```
 ==========================================
 CAN-IDS STATISTICS
 ==========================================
-Runtime: 3600.0 seconds
-Messages processed: 1500000
-Alerts generated: 25
-Processing rate: 416.67 messages/second
+Runtime: 60.0 seconds
+Messages processed: 45600
+Alerts generated: 12
+Processing rate: 760.00 messages/second
 ==========================================
 ```
 
-## Common Use Cases
+---
 
-### 1. Monitor Vehicle CAN Bus
+## Next Steps
 
-```bash
-python main.py -i can0 --log-level INFO
-```
+1. **Write custom rules** — See [rules_guide.md](rules_guide.md) for all 18 rule types with YAML examples
+2. **Tune for your vehicle** — Generate rules from baseline traffic (`scripts/generate_rules_from_baseline.py`)
+3. **Train Stage 3 ML** — `python scripts/train_decision_tree.py --synthetic`
+4. **Review configuration** — See [configuration.md](configuration.md) for every parameter
+5. **Benchmark performance** — `python scripts/benchmark.py`
+6. **Deploy to production** — Install as a systemd service on Raspberry Pi 4
 
-### 2. Analyze Suspicious Traffic
-
-```bash
-python main.py --mode replay --file suspicious.pcap --log-level DEBUG
-```
-
-### 3. Development and Testing
-
-```bash
-# Use virtual CAN for safe testing
-python main.py -i vcan0 --config config/can_ids.yaml
-```
-
-### 4. Production Deployment on Pi
-
-```bash
-# Run as system service
-sudo systemctl start can-ids.service
-```
+---
 
 ## Troubleshooting
 
 ### CAN Interface Not Found
 
 ```bash
-# Check if interface exists
+# Check interfaces
 ip link show
 
-# Load can modules
+# Load kernel modules
 sudo modprobe can
 sudo modprobe can_raw
-sudo modprobe vcan  # For virtual CAN
+sudo modprobe vcan       # For virtual CAN
 
-# For MCP2515
+# For MCP2515 on Pi
 sudo modprobe spi-bcm2835
 ```
 
-### Permission Denied
+### Permission Denied on CAN Interface
 
 ```bash
-# Add user to dialout group (may require re-login)
+# Add user to can group (re-login required)
 sudo usermod -a -G dialout $USER
 
-# Or run with sudo (not recommended for production)
-sudo python main.py -i can0
+# Or use the setup script
+sudo python scripts/setup_vcan.py
 ```
 
 ### No Traffic Detected
 
 ```bash
-# Verify bus is active
+# Is the interface up?
+ip link show can0
+
+# Is there traffic?
 candump can0
 
-# Check bitrate matches your network
-sudo ip link set can0 type can bitrate 250000  # Try different rates
+# Wrong bitrate? Try 250000 or 500000
+sudo ip link set can0 type can bitrate 500000
 sudo ip link set up can0
 ```
 
-### ML Model Errors
+### Stage 3 ML Not Activating
 
 ```bash
-# Install scikit-learn if missing
-pip install scikit-learn numpy
+# Check if model exists
+ls -lh data/models/decision_tree.pkl
 
-# Check model file exists
-ls -lh data/models/
+# If missing, train it
+python scripts/train_decision_tree.py --synthetic
 
-# Train a new model or disable ML detection
-# Edit config: detection_modes: [rule_based]
+# Check logs for error
+python main.py -i vcan0 --log-level DEBUG 2>&1 | grep -i "stage 3"
 ```
 
-## Next Steps
+### Too Many False Positives
 
-1. **Customize Rules**: Edit `config/rules.yaml` for your specific CAN network
-2. **Train ML Model**: Collect baseline traffic and train anomaly detector
-3. **Optimize Performance**: Tune buffer sizes and rate limits in config
-4. **Add Notifications**: Configure email or webhook alerts
-5. **Monitor Logs**: Set up log rotation and monitoring
-6. **Deploy to Production**: Install as systemd service
+1. Generate vehicle-specific rules from baseline data (see [above](#generating-vehicle-specific-rules))
+2. Switch to adaptive rules: edit config to set `rules_file: config/rules_adaptive.yaml`
+3. Increase thresholds in your rules file
+4. See [rules_guide.md](rules_guide.md) > Troubleshooting for detailed guidance
 
-## Getting Help
+### Import Errors
 
-- Check `docs/troubleshooting.md` for common issues
-- Review `config/example_rules.yaml` for rule examples
-- See `PROJECT_SUMMARY.md` for architecture overview
-- Open GitHub issue for bugs or feature requests
+```bash
+# Make sure you're in the venv
+source venv/bin/activate
 
-## Safety and Security
+# Reinstall in dev mode
+pip install -e .
 
-⚠️ **Important**: 
-- This is a **detection-only** system - it cannot block attacks
-- Always test on non-critical systems first
-- Use read-only CAN interfaces when possible
-- Follow responsible disclosure for security issues
-- Unauthorized access to vehicle networks may be illegal
-
-## Contributing
-
-Contributions welcome! Please see CONTRIBUTING.md (to be created) for guidelines.
+# Check scikit-learn (needed for ML)
+pip install scikit-learn numpy
+```
 
 ---
 
-**Happy CAN bus security monitoring!** 🚀
+## Safety Notice
+
+- This is a **detection-only** system — it does not block or modify CAN traffic
+- Always test on non-critical systems or virtual CAN first
+- Use read-only CAN interfaces when possible on production vehicles
+- Unauthorized access to vehicle networks may be illegal in your jurisdiction

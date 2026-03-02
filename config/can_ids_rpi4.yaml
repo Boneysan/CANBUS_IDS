@@ -9,8 +9,8 @@ rules_file: config/rules.yaml
 ml_threshold: 0.75
 detection_modes:
   - rule_based
-  # - ml_based  # Temporarily disabled - models need to be retrained in CANBUS_IDS context
-  # See docs/ML_MODEL_ISSUE.md for details
+  # - ml_based  # Deprecated for real-time (IsolationForest ~15 msg/s) — use decision_tree instead
+  # See docs/ml/ML_MODEL_ISSUE.md for details
 
 # Alert settings
 alerts:

@@ -1,523 +1,322 @@
 # CAN-IDS Implementation Status
 
-**Last Updated**: December 2, 2025  
+**Last Updated**: March 1, 2026  
 **Project**: CANBUS_IDS - Controller Area Network Intrusion Detection System  
-**Architecture**: Dual Detection Engine (Rule-Based + ML-Based)
+**Architecture**: Hierarchical 3-Stage Detection Pipeline
+
+> This is the single authoritative status document. It replaces the previous
+> `IMPLEMENTATION_STATUS.md` (Dec 2, 2025 — showed rules as 5/15 partial) and
+> `IMPLEMENTATION_STATUS_UPDATED.md` (Dec 2, 2025 — overclaimed production readiness).
+> Both have been merged here with corrections verified against the actual source code
+> and config files.
 
 ---
 
-## 🎯 **Executive Summary**
+## Executive Summary
 
-CAN-IDS is designed with a **dual-detection architecture** where both rule-based and ML-based engines run in parallel, providing defense-in-depth. Currently, the **ML detection path is fully ready** with enhanced features achieving 97.20% recall, while the **rule engine is partially implemented** with 5/15 rule types working.
-
-### **Quick Status**
-
-| Component | Status | Performance | Notes |
-|-----------|--------|-------------|-------|
-| **ML Detection** | ✅ **Ready** | 97.20% recall, 100% precision | Enhanced features integrated Dec 2, 2025 |
-| **Rule Detection** | ⚠️ **Partial** | 100% recall DoS, 8-10% precision | 5/15 rule types, 10 parameters missing |
-| **Dual Architecture** | ⚠️ **Incomplete** | ML compensating for rules | Rule engine needs completion |
+| Component | Code Status | Runtime Status | Notes |
+|-----------|-------------|----------------|-------|
+| **Stage 1: Pre-Filter** | ✅ `prefilter.py` | ✅ Active (default-enabled) | Filters 80–95% benign traffic before rule evaluation |
+| **Stage 2: Rule Engine** | ✅ 18/18 rule types implemented | ✅ Active (`rule_based` enabled) | ~759 msg/s; thresholds generic without vehicle-specific tuning |
+| **Stage 3: Decision Tree ML** | ✅ `decision_tree_detector.py` | ⚠️ Enabled in config, but `.pkl` model not committed | 8,000+ msg/s; must train locally via `scripts/train_decision_tree.py` |
+| **Legacy: IsolationForest** | ✅ Code + 6 `.joblib` models present | ❌ Deprecated for real-time (`ml_based` commented out) | ~15 msg/s — replaced by Decision Tree for real-time use |
 
 ---
 
-## 🏗️ **Architectural Design Intent**
+## Architecture
 
-### **Original Design: Dual Detection in Parallel**
+The detection pipeline evolved from a dual (rule + IsolationForest) design to a hierarchical 3-stage system, driven by the IsolationForest’s 15 msg/s throughput being impractical for real-time CAN monitoring.
 
 ```
 Every CAN Message
         │
-        ├──► Rule Engine (Known Attacks)      ──┐
-        │    • Fast pattern matching             │
-        │    • Deterministic detection           │
-        │    • Low false positives               │
-        │    • ~500K msg/s throughput            │
-        │                                        │
-        └──► ML Engine (Novel Attacks)         ──┤
-             • Anomaly detection                 │
-             • Adaptive learning                 ├──► Alert Manager
-             • High recall on unknowns           │    (Correlates both)
-             • ~50K msg/s throughput             │
-                                                 │
-                                        ┌────────┘
-                                        ▼
-                                   Notifications
+        ▼
+  Stage 1: Fast Pre-Filter (prefilter.py)
+        │  • Statistical filtering, enabled by default
+        │  • Filters 80–95% of benign traffic
+        │  • Known-good CAN IDs + timing tolerance
+        │
+    Suspicious messages only
+        │
+        ▼
+  Stage 2: Rule Engine (rule_engine.py)
+        │  • 18 rule types (Phases 1–3)
+        │  • Priority-sorted, early exit on critical match
+        │  • CAN ID hash indexing (O(1) lookup)
+        │  • ~759 msg/s measured throughput
+        │
+    Messages still suspicious
+        │
+        ▼
+  Stage 3: Decision Tree ML (decision_tree_detector.py)
+        │  • sklearn DecisionTreeClassifier (depth 10)
+        │  • 12 features: bytes + DLC + timing + entropy
+        │  • 8,000+ msg/s (278× faster than IsolationForest)
+        │  • 14.1 KB model
+        │
+        ▼
+  Alert Manager (correlates all stages)
+        │
+        ▼
+  Notifications
 ```
 
-**Design Rationale**:
-- **Rule Engine**: Handles specific, well-defined attack patterns with near-zero false positives
-- **ML Engine**: Catches novel, unknown attacks and zero-days with high recall
-- **Together**: Defense-in-depth with complementary strengths
+### What happened to IsolationForest?
 
-**Source**: `docs/current_architecture_design.md`, `docs/multistage_rule_integration.md`
+The original `ml_based` detection mode used an IsolationForest ensemble (300 estimators). At ~15 msg/s, it was 50–270× too slow for real-time CAN traffic (1,000–4,000 msg/s typical). Rather than optimizing it, the project:
 
----
+1. **Replaced it** with a Decision Tree classifier (8,000+ msg/s) as Stage 3
+2. **Added a pre-filter** (Stage 1) that eliminates most benign traffic before any detection runs
+3. **Kept the code and models** for offline analysis — `ml_based` is commented out in config, not deleted
 
-## ✅ **ML Detection Path - COMPLETE**
-
-### **Enhanced Feature Extraction**
-
-**Status**: ✅ **Fully Implemented and Tested** (December 2, 2025)
-
-**Basic Features** (50 features):
-- ✅ Message-level: CAN ID, DLC, data bytes, frame flags
-- ✅ Statistical: Mean, median, std, min, max, range, sum, entropy
-- ✅ Temporal: Frequency tracking, IAT statistics, jitter
-- ✅ Pattern: Repetition, sequential, alternating patterns
-- ✅ Behavioral: DLC consistency, data change rate, payload variance
-- ✅ Communication: Message rate, ID diversity, priority estimation
-
-**Enhanced Features** (8 features, from Vehicle_Models research):
-- ✅ **payload_entropy**: Shannon entropy H = -Σ p(v)×log₂(p(v)) [TCE-IDS paper]
-- ✅ **hamming_distance**: Bit-level payload differences [Novel Architecture paper]
-- ✅ **iat_zscore**: Normalized timing deviation (IAT - μ)/σ [SAIDuCANT paper]
-- ✅ **unknown_bigram**: Novel 2-ID sequences [Novel Architecture paper]
-- ✅ **unknown_trigram**: Novel 3-ID sequences [Novel Architecture paper]
-- ✅ **bit_time_mean**: Physical layer bit timing [BTMonitor paper]
-- ✅ **bit_time_rms**: RMS of bit timing [BTMonitor paper]
-- ✅ **bit_time_energy**: Bit timing energy metric [BTMonitor paper]
-
-**Implementation**: `src/preprocessing/feature_extractor.py`
-- Enable via: `FeatureExtractor(enable_enhanced_features=True)`
-- Requires calibration: `calibrate_enhanced_features(normal_messages)`
-- Overhead: ~0.02ms per message (negligible)
-
-**Testing**:
-- ✅ Test Suite: `tests/test_enhanced_features.py`
-- ✅ Results: 9/9 tests passing
-- ✅ Coverage: All feature types validated
-
-**Documentation**: `docs/enhanced_features_integration.md`
-
-### **High-Performance Models**
-
-**Status**: ✅ **12 Models Loaded and Validated** (December 2, 2025)
-
-**Model Inventory**:
-1. ✅ **adaptive_weighted_detector.joblib** - 97.20% recall, 100% precision (BEST)
-2. ✅ **ensemble_detector.joblib** - 680MB, comprehensive ensemble
-3. ✅ **improved_isolation_forest.joblib** - 658MB, high-accuracy IF
-4. ✅ **improved_svm.joblib** - 23MB, optimized SVM
-5. ✅ **adaptive_load_shedding.joblib** - 40-48K msg/s, fast
-6. ✅ **aggressive_load_shedding.joblib** - 40-48K msg/s, 2% Stage 3 load
-7. ✅ **adaptive_only.joblib** - Adaptive detection
-8. ✅ **full_pipeline.joblib** - Complete 3-stage pipeline
-9. ✅ **ensemble_impala.joblib** - Multi-attack cross-check
-10. ✅ **ensemble_traverse.joblib** - Multi-attack cross-check
-11. ✅ **enhanced_detector.joblib** - 0.3MB, RandomForest
-12. ✅ **can_feature_engineer.joblib** - Feature engineering support
-
-**Location**: `data/models/` (1.4GB total)
-
-**Testing**:
-- ✅ Test Script: `tests/test_new_models.py`
-- ✅ Results: 12/12 models loaded successfully
-- ✅ Validation: 4/11 models can predict with basic features, all work with enhanced features
-
-**Performance Comparison**:
-
-| Model Type | Recall | Precision | Throughput | Size |
-|-----------|--------|-----------|------------|------|
-| **Baseline (old)** | 0-10% | N/A | 10K msg/s | <1MB |
-| **Enhanced (new)** | 97.20% | 100% | 40-50K msg/s | 618B-680MB |
-| **Improvement** | +87pp | +100pp | +4-5x | Varies |
-
-**Source Models**: Vehicle_Models research project
-
-### **Required Dependencies**
-
-**Status**: ✅ **All Dependencies Copied** (December 2, 2025)
-
-**Supporting Modules** (from Vehicle_Models):
-- ✅ `detectors.py` - SimpleRuleDetector, base classes
-- ✅ `weighted_ensemble_detector.py` - Weighted ensemble
-- ✅ `improved_detectors.py` - Improved IF/SVM
-- ✅ `advanced_detectors.py` - Advanced anomaly detection
-- ✅ `ensemble_crosscheck_detector.py` - Multi-attack cross-check
-- ✅ `can_feature_engineering.py` - CAN-specific features
-- ✅ `enhanced_features.py` - Research-based features
-
-**Location**: Project root (for pickle compatibility)
+The `ml_based` config flag controls only the legacy IsolationForest path. The Decision Tree and pre-filter have their own config sections (`decision_tree.enabled`, `prefilter.enabled`).
 
 ---
 
-## ⚠️ **Rule Detection Path - PARTIAL**
+## Rule Engine — 18/18 Rule Types Implemented
 
-### **Implemented Rule Types** (5/15)
+All rule types are implemented in `src/detection/rule_engine.py`. The original 7 shipped pre-November 2025; the remaining 11 were added in Phases 1–3 (completed December 14, 2025). Test suite: 61/61 tests passing.
 
-**Status**: ✅ **Working** but limited coverage
+### Original Rule Types (7)
 
-1. ✅ **High Entropy Data** - Detects unusual entropy in message data
-2. ✅ **Unknown CAN ID** - Flags messages from unrecognized CAN IDs
-3. ✅ **Checksum Validation Failure** - Validates message checksums
-4. ✅ **Counter Sequence Error** - Detects sequence counter anomalies
-5. ✅ **Seed Request Pattern** - Detects security access seed patterns
+| Rule Type | Method | Purpose |
+|-----------|--------|---------|
+| `data_pattern` | `_check_data_pattern()` | Pattern matching in message data |
+| `max_frequency` | `_check_frequency_violation()` | Per-CAN-ID message frequency monitoring |
+| `check_timing` | `_check_timing_violation()` | Inter-arrival time validation |
+| `allowed_sources` | `_validate_source()` | Source validation for specific ECUs |
+| `check_checksum` | (inline) | Checksum validation |
+| `check_counter` | (inline) | Counter sequence validation |
+| `entropy_threshold` | (inline) | Data entropy analysis |
 
-**Performance**:
-- **Recall**: 100% on DoS attacks (no attacks missed)
-- **Precision**: 8-10% for DoS, <1% for other attacks
-- **False Positive Rate**: ~90% on normal traffic
-- **Throughput**: ~500K msg/s
+### Phase 1 — Critical Parameters (3)
 
-**Issue**: High false positives due to missing validation parameters
+| Rule Type | Method | Purpose |
+|-----------|--------|---------|
+| `validate_dlc` | `_validate_dlc_strict()` | Strict DLC validation against CAN 2.0 spec |
+| `check_frame_format` | `_check_frame_format()` | Frame format and structure validation |
+| `global_message_rate` | `_check_global_message_rate()` | Bus-wide flooding detection |
 
-### **Missing Rule Parameters** (10 items)
+### Phase 2 — Important Parameters (4)
 
-**Status**: ❌ **Defined but Not Implemented**
+| Rule Type | Method | Purpose |
+|-----------|--------|---------|
+| `check_source` | `_validate_source_enhanced()` | Enhanced diagnostic source validation (OBD-II/UDS) |
+| `check_replay` | `_check_replay_attack()` | Replay attack detection with time windows |
+| `data_byte_0`–`7` | `_check_byte_values()` | Individual byte-level validation (8 parameters) |
+| `whitelist_mode` | (inline) | CAN ID whitelist enforcement |
 
-These parameters are **defined in `config/rules.yaml`** but not implemented in `src/detection/rule_engine.py`:
+### Phase 3 — Specialized Parameters (4)
 
-#### **Critical Priority** (Needed for Basic Dual-Detection)
+| Rule Type | Method | Purpose |
+|-----------|--------|---------|
+| `check_data_integrity` | `_check_data_integrity()` | XOR checksum validation for safety systems |
+| `check_steering_range` | `_check_steering_range()` | Steering angle physical limits validation |
+| `check_repetition` | `_check_repetition_pattern()` | Repetitive pattern detection |
+| `frame_type` | `_validate_frame_type()` | Standard vs extended frame validation |
 
-1. ❌ **validate_dlc**
-   - **Purpose**: Validate Data Length Code against expected values
-   - **Used For**: Invalid DLC detection
-   - **Impact**: Basic frame validation missing
-   - **Priority**: 🔴 HIGH
+### Test Coverage
 
-2. ❌ **check_frame_format**
-   - **Purpose**: Verify CAN frame structure and format
-   - **Used For**: Malformed frame detection
-   - **Impact**: Frame integrity checks missing
-   - **Priority**: 🔴 HIGH
-
-3. ❌ **global_message_rate**
-   - **Purpose**: Monitor overall bus message rate for flooding
-   - **Used For**: Bus flooding/DoS detection
-   - **Impact**: Can't properly detect bus flooding attacks
-   - **Priority**: 🔴 HIGH
-
-#### **Important Priority** (Needed for Production)
-
-4. ❌ **check_source**
-   - **Purpose**: Validate the source of diagnostic requests
-   - **Used For**: Unauthorized OBD-II detection
-   - **Impact**: Diagnostic security weakened
-   - **Priority**: 🟡 MEDIUM
-
-5. ❌ **check_replay**
-   - **Purpose**: Detect identical message replays
-   - **Used For**: Replay attack detection
-   - **Impact**: Replay attacks not specifically detected
-   - **Priority**: 🟡 MEDIUM
-
-6. ❌ **data_byte_0** (and similar)
-   - **Purpose**: Check specific byte values in data field
-   - **Used For**: Emergency brake override, targeted attacks
-   - **Impact**: Byte-level attack detection missing
-   - **Priority**: 🟡 MEDIUM
-
-#### **Specialized Priority** (Vehicle/Attack-Specific)
-
-7. ❌ **check_data_integrity**
-   - **Purpose**: Verify data integrity for critical systems
-   - **Used For**: Brake/steering manipulation detection
-   - **Impact**: Critical system protection limited
-   - **Priority**: 🟢 LOW
-
-8. ❌ **check_steering_range**
-   - **Purpose**: Validate steering angle values within range
-   - **Used For**: Steering manipulation detection
-   - **Impact**: Vehicle-specific protection missing
-   - **Priority**: 🟢 LOW
-
-9. ❌ **check_repetition**
-   - **Purpose**: Detect repetitive data patterns
-   - **Used For**: Pattern-based attack detection
-   - **Impact**: Repetition attacks not specifically detected
-   - **Priority**: 🟢 LOW
-
-10. ❌ **frame_type**
-    - **Purpose**: Validate extended vs standard CAN frame types
-    - **Used For**: Frame type violation detection
-    - **Impact**: Frame type attacks not detected
-    - **Priority**: 🟢 LOW
+| Suite | Tests | Status |
+|-------|-------|--------|
+| Phase 1 (`tests/test_rule_engine_phase1.py`) | 19/19 | ✅ |
+| Phase 2 (`tests/test_rule_engine_phase2.py`) | 21/21 | ✅ |
+| Phase 3 (`tests/test_rule_engine_phase3.py`) | 21/21 | ✅ |
+| **Total** | **61/61** | **✅** |
 
 ---
 
-## 📊 **Current System Capabilities**
+## ML Detection — Evolved to Hierarchical Pipeline
 
-### **What Works Now**
+### Stage 3: Decision Tree Classifier (Active)
 
-✅ **ML Detection** (97.20% recall, 100% precision)
-- Novel attack detection
-- Zero-day threat identification
-- Anomaly-based behavioral analysis
-- High-performance inference (40-50K msg/s)
+Implemented in `src/detection/decision_tree_detector.py`. This is the current real-time ML approach.
 
-✅ **Basic Rule Detection** (5 rule types)
-- DoS attack detection (100% recall)
-- Unknown ID flagging
-- Entropy analysis
-- Counter validation
-- Seed pattern detection
+| Attribute | Value |
+|-----------|-------|
+| Algorithm | `sklearn.tree.DecisionTreeClassifier` (max depth 10) |
+| Features | 12: 8 byte values + DLC + interval + frequency + entropy |
+| Throughput | 8,000+ msg/s (278× faster than IsolationForest) |
+| Model size | 14.1 KB |
+| Config | `decision_tree.enabled: true` in `config/can_ids.yaml` |
+| Model file | `data/models/decision_tree.pkl` (**not committed** — train via `scripts/train_decision_tree.py`) |
 
-✅ **Infrastructure**
-- Dual-path message routing
-- Alert correlation
-- Configuration management
-- Resource monitoring
-- Comprehensive logging
+### Stage 1: Fast Pre-Filter (Active)
 
-### **What's Limited**
+Implemented in `src/detection/prefilter.py`. Enabled by default.
 
-⚠️ **Rule Detection Gaps**
-- Only 5/15 rule types implemented
-- High false positive rate (90%)
-- Low precision (8-10%)
-- Missing frame validation
-- Missing byte-level checks
-- Missing integrity verification
+- Filters 80–95% of known-benign traffic before rule evaluation
+- Uses known-good CAN ID set + timing tolerance (±30%)
+- CAN IDs extracted from rules at init, or configured in `prefilter.known_good_ids`
 
-### **What Doesn't Work Yet**
+### Legacy: IsolationForest (Deprecated for Real-Time)
 
-❌ **Complete Dual Detection**
-- Rule engine can't fulfill its architectural role
-- Missing 10 validation parameters
-- System relies heavily on ML to compensate
+Implemented in `src/detection/ml_detector.py`. The `ml_based` detection mode is **commented out** in both config files—not because ML failed, but because the IsolationForest algorithm is inherently too slow (15 msg/s) for real-time CAN bus monitoring. It was replaced by the Decision Tree for that purpose.
 
----
+**IsolationForest remains useful for**:
+- Offline batch analysis of captured traffic
+- Research and model comparison
+- Novel attack discovery where latency is not a constraint
 
-## 🎯 **Roadmap to Complete Implementation**
+### Feature Extraction
 
-### **Phase 1: Enable ML Detection** ✅ COMPLETE
+Implemented in `src/preprocessing/feature_extractor.py`.
 
-**Status**: ✅ **Ready to Deploy** (December 2, 2025)
+**Basic features** (50): CAN ID, DLC, data bytes, statistical, temporal, pattern, behavioral, communication features.
 
-**What Was Done**:
-- ✅ Integrated 8 enhanced features from Vehicle_Models
-- ✅ Validated 12 high-performance models
-- ✅ Created comprehensive test suite (9/9 passing)
-- ✅ Documented integration with source attribution
+**Enhanced features** (8, opt-in via `enable_enhanced_features=True`):
 
-**To Enable**:
-1. Set `enable_enhanced_features=True` in FeatureExtractor
-2. Calibrate on normal traffic: `calibrate_enhanced_features(normal_messages)`
-3. Load model: `adaptive_weighted_detector.joblib`
-4. Update config: Enable `ml_based` in `detection_modes`
+| Feature | Source Paper |
+|---------|-------------|
+| `payload_entropy` | TCE-IDS |
+| `hamming_distance` | Novel Architecture |
+| `iat_zscore` | SAIDuCANT |
+| `unknown_bigram` / `unknown_trigram` | Novel Architecture |
+| `bit_time_mean` / `bit_time_rms` / `bit_time_energy` | BTMonitor |
 
-**Expected Performance**: 97.20% recall, 100% precision
+Tests: `tests/test_enhanced_features.py` — 9/9 passing.
 
-### **Phase 2: Complete Rule Engine** (Next)
+### IsolationForest Models in Repository
 
-**Status**: 📋 **Planned**
+6 model files exist in `data/models/` (all IsolationForest-based, from Vehicle_Models research):
 
-**Critical Implementation** (3 parameters):
-1. Implement `validate_dlc` - Frame validation
-2. Implement `check_frame_format` - Malformed detection
-3. Implement `global_message_rate` - Flooding detection
+| Model | Size | Notes |
+|-------|------|-------|
+| `aggressive_load_shedding.joblib` | 1.3 MB | Config default for legacy `ml_based` mode |
+| `adaptive_load_shedding.joblib` | 1.3 MB | Alternative multi-stage config |
+| `full_pipeline.joblib` | 1.3 MB | Complete IF pipeline |
+| `enhanced_detector.joblib` | 356 KB | RandomForest-based |
+| `can_feature_engineer.joblib` | 21 KB | CAN-specific feature engineering |
+| `adaptive_weighted_detector.joblib` | 618 B | Best lab accuracy (97.20% recall, 100% precision) |
 
-**Expected Impact**:
-- Rule precision: 8-10% → 40-60%
-- False positive rate: 90% → 30-40%
-- Complete basic dual-detection capability
+> **Correction**: Earlier docs claimed 12 models. The other 6 were validated in the
+> Vehicle_Models research project but were never copied to this repository.
 
-**Estimated Effort**: 1-2 weeks
+### All ML Detector Modules
 
-### **Phase 3: Production Rule Hardening** (Future)
-
-**Status**: 📋 **Future**
-
-**Important Implementation** (3 parameters):
-4. Implement `check_source` - Diagnostic validation
-5. Implement `check_replay` - Replay detection
-6. Implement `data_byte_0` - Byte-level checks
-
-**Expected Impact**:
-- Rule precision: 40-60% → 70-85%
-- False positive rate: 30-40% → 10-15%
-- Production-grade rule detection
-
-**Estimated Effort**: 2-3 weeks
-
-### **Phase 4: Specialized Coverage** (Optional)
-
-**Status**: 📋 **Optional**
-
-**Specialized Implementation** (4 parameters):
-7. Implement `check_data_integrity` - Critical system protection
-8. Implement `check_steering_range` - Vehicle-specific validation
-9. Implement `check_repetition` - Pattern detection
-10. Implement `frame_type` - Frame type validation
-
-**Expected Impact**:
-- Vehicle-specific protection
-- Advanced attack coverage
-- Full architectural completion
-
-**Estimated Effort**: 2-3 weeks
+| Module | Purpose | Runtime Status |
+|--------|---------|----------------|
+| `decision_tree_detector.py` | Stage 3 Decision Tree classifier | ✅ Config-enabled |
+| `prefilter.py` | Stage 1 fast statistical filter | ✅ Default-enabled |
+| `ml_detector.py` | IsolationForest detector | Deprecated for real-time |
+| `enhanced_ml_detector.py` | Multi-stage ML pipeline with gating | Configured |
+| `multistage_detector.py` | Multi-stage detector framework | Available |
+| `weighted_ensemble_detector.py` | Weighted ensemble voting | Available |
+| `ensemble_crosscheck_detector.py` | Cross-validation ensemble | Available |
+| `advanced_detectors.py` | Additional detector implementations | Available |
+| `improved_detectors.py` | Improved detector variants | Available |
+| `vehicle_models_compat.py` | Vehicle_Models pickle compatibility | Support module |
+| `vehicle_calibration.py` | Per-vehicle calibration | Available |
 
 ---
 
-## 📈 **Performance Targets**
+## Measured Performance
 
-### **Current Performance**
+These are **actual measured numbers**, not projections.
 
-| Metric | ML Path | Rule Path | Combined |
-|--------|---------|-----------|----------|
-| **Recall** | 97.20% | 100% (DoS only) | ~98% |
-| **Precision** | 100% | 8-10% | Variable |
-| **False Positives** | <2% | ~90% | High |
-| **Throughput** | 40-50K msg/s | 500K msg/s | 40K msg/s |
+| Metric | Stage 2: Rule Engine | Stage 3: Decision Tree | Legacy: IsolationForest | Source |
+|--------|---------------------|----------------------|------------------------|--------|
+| **Throughput** | ~759 msg/s | 8,000+ msg/s | ~15 msg/s | Dec 3–14, 2025 |
+| **Recall** | 100% (DoS), 94.76% (overall) | 85–88% (pre-filtered) | 97.20% (lab) | Batch test set 01 |
+| **Precision** | 18% (generic) → 91%+ (tuned) | TBD on production data | 100% (lab, best model) | Dec 7–14, 2025 |
+| **FPR** | 81.7% → **8.43%** (Tier 3) | TBD | <2% (lab) | Dec 14, 2025 |
+| **Model size** | N/A (rules) | 14.1 KB | 280 KB–1.3 MB | — |
 
-### **Target Performance** (Phase 3 Complete)
-
-| Metric | ML Path | Rule Path | Combined |
-|--------|---------|-----------|----------|
-| **Recall** | 97.20% | 95% | 98-99% |
-| **Precision** | 100% | 70-85% | 85-95% |
-| **False Positives** | <2% | 10-15% | <5% |
-| **Throughput** | 40-50K msg/s | 500K msg/s | 40K msg/s |
+**Key takeaway**: The rule engine works and catches attacks, but generic thresholds cause high false positives on real traffic. Vehicle-specific baseline extraction would fix this (see `docs/guides/PROJECT_CONTEXT.md`).
 
 ---
 
-## 🔧 **Configuration Status**
+## Known Gaps & Remaining Work
 
-### **Current Config** (`config/can_ids.yaml`)
+### Performance
+
+- [ ] Rule engine throughput: 759 msg/s → target 2,000–4,000 msg/s
+- [ ] End-to-end 3-stage pipeline benchmark on Raspberry Pi 4 (Stages 1+2+3 combined)
+- [x] ~~ML throughput: 15 msg/s~~ → Replaced by Decision Tree at 8,000+ msg/s
+
+### Rule Tuning
+
+- [ ] Extract vehicle-specific timing/frequency baselines from training data
+- [ ] Auto-generate tuned `rules.yaml` using mean ± 3σ thresholds
+- [ ] Reduce FPR from ~8.43% (Tier 3) further toward <5%
+
+### Config Issues
+
+- [ ] `decision_tree.pkl` not committed — must be trained locally (Stage 3 falls back to Stages 1+2 without it)
+- [ ] Config comment for `ml_based` says "temporarily disabled" — should say "deprecated for real-time; use decision_tree instead"
+- [ ] Config comment paths reference `docs/ML_MODEL_ISSUE.md` — actual file is `docs/ml/ML_MODEL_ISSUE.md`
+
+### Missing Documentation
+
+- [x] ~~`docs/guides/rules_guide.md` only covers 7 rule types~~ → Updated to cover all 18 (Mar 1, 2026)
+- [ ] No consolidated configuration parameter reference
+- [ ] No end-to-end getting-started guide that works out of the box
+
+---
+
+## Configuration Reference
+
+### Current Config (`config/can_ids.yaml`)
 
 ```yaml
+# Stage 2: Rule engine (always active)
 detection_modes:
-  - rule_based     # ✅ Active (partial implementation)
-  # - ml_based     # ❌ Disabled (but ready to enable)
+  - rule_based
+  # - ml_based  # Deprecated for real-time — IsolationForest at 15 msg/s
+
+rules_file: config/rules_adaptive.yaml
+
+# Stage 3: Decision Tree ML (replaces IsolationForest for real-time)
+decision_tree:
+  enabled: true
+  model_path: data/models/decision_tree.pkl
+
+# Stage 1: Pre-filter (enabled by default)
+prefilter:
+  enabled: true
+  timing_tolerance: 0.3
 ```
 
-### **Recommended Config** (To Enable Dual Detection)
+### To Re-Enable IsolationForest (Offline Analysis Only)
 
 ```yaml
+# Only for batch/offline analysis — not viable for real-time
 detection_modes:
-  - rule_based     # Known attack patterns
-  - ml_based       # Novel attack detection
+  - rule_based
+  - ml_based
 
-ml_detection:
-  model_path: "data/models/adaptive_weighted_detector.joblib"
-  enable_enhanced_features: true
-  
-  # Calibration required for full feature set
-  calibration:
-    enabled: true
-    normal_traffic_required: 10000  # messages
+ml_model:
+  path: data/models/adaptive_weighted_detector.joblib
+  contamination: 0.20
 ```
 
 ---
 
-## 📚 **Documentation References**
+## Documentation References
 
-### **Architecture**
-- `docs/current_architecture_design.md` - Overall system design
-- `docs/multistage_rule_integration.md` - Dual detection architecture
-- `docs/design_modification_analysis.md` - Design rationale
-
-### **ML Implementation**
-- `docs/enhanced_features_integration.md` - Enhanced features guide
-- `tests/test_enhanced_features.py` - Feature validation tests
-- `tests/test_new_models.py` - Model compatibility tests
-
-### **Rule Implementation**
-- `docs/UNIMPLEMENTED_FEATURES.md` - Missing rule parameters
-- `docs/rules_guide.md` - Rule configuration guide
-- `config/rules.yaml` - Rule definitions
-
-### **Performance**
-- `docs/raspberry_pi4_optimization_guide.md` - Pi4 optimization
-- `docs/resource_monitoring.md` - Resource monitoring system
-- `docs/testing_results.md` - Test results and benchmarks
+| Topic | File |
+|-------|------|
+| Architecture design | `docs/planning/current_architecture_design.md` |
+| Dual detection design | `docs/implementation/multistage_rule_integration.md` |
+| Enhanced ML features | `docs/implementation/enhanced_features_integration.md` |
+| ML optimization strategies | `docs/ml/ML_OPTIMIZATION_GUIDE.md` |
+| Performance optimization plans | `docs/performance/IMPROVEMENT_ROADMAP.md`, `docs/performance/BUILD_PLAN_7000_MSG_SEC.md` |
+| Rule tuning strategy | `docs/guides/PROJECT_CONTEXT.md` |
+| Pi4 deployment | `docs/deployment/RASPBERRY_PI_DEPLOYMENT_GUIDE.md` |
+| Feature status (detailed) | `docs/implementation/UNIMPLEMENTED_FEATURES.md` |
+| Phase completion logs | `docs/development_logs/PHASE_1_COMPLETE.md` through `PHASE_3_COMPLETE.md` |
 
 ---
 
-## ✅ **Next Actions**
+## Change History
 
-### **Immediate** (Ready Now)
-
-1. **Enable ML Detection**:
-   ```python
-   # In main.py or detector initialization
-   extractor = FeatureExtractor(enable_enhanced_features=True)
-   extractor.calibrate_enhanced_features(normal_messages)
-   ```
-
-2. **Update Configuration**:
-   ```yaml
-   detection_modes:
-     - rule_based
-     - ml_based  # Uncomment this line
-   ```
-
-3. **Load High-Performance Model**:
-   ```yaml
-   ml_detection:
-     model_path: "data/models/adaptive_weighted_detector.joblib"
-   ```
-
-4. **Monitor Performance**:
-   - Expected: 97.20% recall, 100% precision
-   - Watch resource usage with monitoring system
-
-### **Short-Term** (Next 1-2 Weeks)
-
-1. **Implement Critical Rule Parameters**:
-   - `validate_dlc` - Basic validation
-   - `check_frame_format` - Frame integrity
-   - `global_message_rate` - Flooding detection
-
-2. **Reduce Rule False Positives**:
-   - Target: 90% → 30-40% FP rate
-   - Goal: 8-10% → 40-60% precision
-
-3. **Test Dual Detection**:
-   - Validate both engines working together
-   - Measure alert correlation
-   - Verify defense-in-depth
-
-### **Long-Term** (Next 2-3 Months)
-
-1. **Complete Rule Engine** (Phases 3-4)
-2. **Production Hardening**
-3. **Vehicle-Specific Tuning**
-4. **Advanced Attack Coverage**
-
----
-
-## 📊 **Success Metrics**
-
-### **System Completeness**
-
-- [x] ML Detection Path: **100% Complete** ✅
-- [ ] Rule Detection Path: **33% Complete** (5/15 rule types)
-- [ ] Dual Detection Architecture: **60% Complete** (ML ready, rules partial)
-
-### **Detection Performance**
-
-- [x] ML Recall Target (>95%): **97.20%** ✅
-- [x] ML Precision Target (>90%): **100%** ✅
-- [ ] Rule Precision Target (>70%): **8-10%** ❌
-- [ ] Combined FP Rate (<5%): **~45%** ❌
-
-### **Production Readiness**
-
-- [x] Feature Extraction: **Complete** ✅
-- [x] Model Validation: **Complete** ✅
-- [x] Testing Infrastructure: **Complete** ✅
-- [x] Documentation: **Complete** ✅
-- [ ] Full Dual Detection: **Partial** ⚠️
-- [ ] Rule Engine Complete: **Partial** ⚠️
-
----
-
-## 🎯 **Conclusion**
-
-**The CAN-IDS system has made significant progress**, with the ML detection path fully implemented and achieving industry-leading performance (97.20% recall, 100% precision). The enhanced features integration on December 2, 2025, represents a major milestone that enables the high-performance detection capabilities researched in the Vehicle_Models project.
-
-**However, the dual-detection architecture is incomplete** because the rule engine is only 33% implemented (5/15 rule types). While the ML engine can compensate for many missing rule capabilities, the system is not operating as originally designed until the remaining 10 rule parameters are implemented.
-
-**Recommended Path Forward**:
-1. **Enable ML detection immediately** (ready now, 97.20% recall)
-2. **Implement critical 3 rule parameters** (validates basic dual-detection)
-3. **Complete remaining 7 parameters** (achieves full architectural vision)
-
-The foundation is solid, the ML path is complete, and the roadmap is clear. The system can provide excellent protection now with ML alone, and will achieve the full dual-detection vision as the rule engine implementation completes.
-
----
-
-**Status**: System operational with ML ready, rule engine partial  
-**Last Review**: December 2, 2025  
-**Next Review**: After Phase 2 completion (rule parameters 1-3)
+| Date | Change |
+|------|--------|
+| Oct 2025 | Original 7 rule types implemented |
+| Nov 30, 2025 | 6 pre-trained models integrated from Vehicle_Models |
+| Dec 2, 2025 | 8 enhanced ML features integrated; Phase 1–3 rule implementation completed (18/18 types) |
+| Dec 3, 2025 | ML bugs fixed; throughput benchmarks run (759 msg/s rules, 15 msg/s ML) |
+| Dec 7, 2025 | FPR analysis: 81.7% with generic thresholds; tuning strategy defined |
+| Dec 14, 2025 | Phase 3 finalized; 61/61 rule tests passing; Tier 3 FPR improved to 8.43% |
+| Dec 16–17, 2025 | PCA testing, additional performance testing |
+| Mar 1, 2026 | Merged IMPLEMENTATION_STATUS.md + IMPLEMENTATION_STATUS_UPDATED.md into this document |

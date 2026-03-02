@@ -1,13 +1,16 @@
 # CAN-IDS Detection Rules Writing Guide
 
+**Last Updated**: March 1, 2026  
+**Rule Engine**: `src/detection/rule_engine.py` — 18 rule types, 30+ parameters
+
 This guide explains how to write custom detection rules for the CAN-IDS signature-based detection engine.
 
 ## Table of Contents
 
 1. [Rule Basics](#rule-basics)
 2. [Rule Structure](#rule-structure)
-3. [Rule Parameters](#rule-parameters)
-4. [Detection Methods](#detection-methods)
+3. [All 18 Rule Types](#all-18-rule-types)
+4. [Adaptive Timing Parameters](#adaptive-timing-parameters)
 5. [Example Rules](#example-rules)
 6. [Best Practices](#best-practices)
 7. [Testing Rules](#testing-rules)
@@ -17,21 +20,23 @@ This guide explains how to write custom detection rules for the CAN-IDS signatur
 
 ## Rule Basics
 
-Detection rules are defined in YAML format and stored in `config/rules.yaml`. Each rule describes a specific attack pattern, policy violation, or anomalous behavior to detect.
+Detection rules are defined in YAML format and stored in `config/rules.yaml` (or `config/rules_adaptive.yaml` for auto-generated rules). Each rule describes a specific attack pattern, policy violation, or anomalous behavior to detect.
 
 ### Basic Concepts
 
-- **Rules are stateful** - Can track message history, timing, and frequency
-- **Rules are composable** - Multiple conditions can be combined
-- **Rules generate alerts** - When matched, create alerts with severity levels
-- **Rules are hot-reloadable** - Can be updated without restarting the system
+- **Rules are stateful** — Track message history, timing, frequency, payloads
+- **Rules are composable** — Multiple conditions are ANDed together
+- **Rules generate alerts** — Matched rules create alerts with severity levels
+- **Rules support priority** — Lower priority number = evaluated first, enables early exit
 
 ### Rule File Location
 
 ```
 config/
-├── rules.yaml          # Active rules (loaded by IDS)
-└── example_rules.yaml  # Template/examples
+├── rules.yaml              # Hand-written rules
+├── rules_adaptive.yaml     # Auto-generated from baseline data
+├── example_rules.yaml      # Templates
+└── rules_generated.yaml    # Generated rules (alternative)
 ```
 
 ---
@@ -52,258 +57,125 @@ rules:
 
 ### Complete Rule Template
 
+All available parameters (use only what you need — most are optional):
+
 ```yaml
 rules:
-  - name: "Rule Name"                    # Required: Unique rule identifier
-    severity: CRITICAL|HIGH|MEDIUM|LOW   # Required: Alert severity
-    description: "What this detects"     # Required: Human-readable description
-    action: alert|log|block              # Required: Action to take (block not yet implemented)
+  - name: "Rule Name"                    # Required: unique identifier
+    severity: CRITICAL|HIGH|MEDIUM|LOW   # Required: alert severity
+    description: "What this detects"     # Required: human-readable description
+    action: alert|log                    # Required: action on match
+    priority: 5                          # 0=critical, 5=normal, 10=low (early exit)
     
-    # CAN ID Matching (choose one)
-    can_id: 0x123                        # Exact CAN ID match
-    can_id_range: [0x100, 0x200]        # Range of CAN IDs (inclusive)
+    # === CAN ID Matching ===
+    can_id: 0x123                        # Exact CAN ID
+    can_id_range: [0x100, 0x200]        # Range (inclusive)
     
-    # Data Matching
-    data_pattern: "DE AD BE EF"          # Hex pattern to match (space-separated)
-    data_contains: ["27 01", "27 03"]   # List of patterns (any match)
-    data_byte_0: 0xFF                    # Match specific byte position
+    # === 1. Data Pattern Matching ===
+    data_pattern: "DE AD BE EF"          # Hex pattern (* = wildcard)
+    data_contains: ["27 01", "27 03"]   # Any-match list
     
-    # Frame Validation
-    dlc_min: 0                           # Minimum DLC (0-8)
-    dlc_max: 8                           # Maximum DLC (0-8)
-    validate_dlc: true                   # Enable DLC validation
-    check_frame_format: true             # Check frame structure
-    frame_type: standard|extended        # Expected frame type
+    # === 2. Frequency Detection ===
+    max_frequency: 1000                  # Max messages per time_window
+    time_window: 1                       # Window in seconds
     
-    # Frequency Detection
-    max_frequency: 1000                  # Max messages per second
-    time_window: 1                       # Time window in seconds
-    global_message_rate: 5000           # Global rate across all IDs
-    
-    # Timing Analysis
-    check_timing: true                   # Enable timing checks
+    # === 3. Timing Analysis ===
+    check_timing: true
     expected_interval: 100               # Expected interval in ms
     interval_variance: 10                # Allowed variance in ms
+    sigma_extreme: 3.0                   # Tier 1: extreme threshold (σ)
+    sigma_moderate: 1.5                  # Tier 2: sustained threshold (σ)
+    consecutive_required: 5              # Tier 2: consecutive violations needed
+    payload_repetition_threshold: 0.55   # Tier 3: min repeated-payload fraction
     
-    # Replay Detection
-    check_replay: true                   # Enable replay detection
-    replay_window: 5000                  # Detection window in ms
+    # === 4. Source Validation ===
+    allowed_sources: [0x10, 0x20]       # Allowed source IDs
     
-    # Source Validation
-    check_source: true                   # Enable source checking
-    allowed_sources: [0x10, 0x20]       # List of allowed source IDs
+    # === 5. Checksum Validation ===
+    check_checksum: true
     
-    # Data Integrity
-    check_checksum: true                 # Validate message checksum
-    check_counter: true                  # Validate sequence counter
-    check_data_integrity: true           # General integrity check
+    # === 6. Counter Validation ===
+    check_counter: true
     
-    # Pattern Analysis
+    # === 7. Entropy Analysis ===
     entropy_threshold: 7.5               # Max Shannon entropy (bits)
-    check_repetition: true               # Detect repeated patterns
-    max_repetitions: 10                  # Max allowed repetitions
     
-    # Network Topology
-    whitelist_mode: true                 # Whitelist mode (vs blacklist)
-    allowed_can_ids: [0x100, 0x200]     # Allowed CAN IDs in whitelist
+    # === 8. DLC Validation ===
+    validate_dlc: true
+    dlc_min: 0                           # Minimum DLC (0-8)
+    dlc_max: 8                           # Maximum DLC (0-8)
     
-    # Steering/Safety Specific
-    check_steering_range: true           # Validate steering angle
-    max_steering_angle: 540              # Max degrees
+    # === 9. Frame Format ===
+    check_frame_format: true
+    
+    # === 10. Global Message Rate ===
+    global_message_rate: 5000           # Max total msgs/window across all IDs
+    
+    # === 11. Enhanced Source Validation ===
+    check_source: true                   # Diagnostic source validation (OBD-II/UDS)
+    
+    # === 12. Replay Detection ===
+    check_replay: true
+    replay_time_threshold: 1.0           # Max seconds between replays
+    
+    # === 13. Byte-Level Validation ===
+    data_byte_0: 0xFF                    # Expected value for byte 0
+    data_byte_1: 0x00                    # ... through data_byte_7
+    
+    # === 14. Whitelist Mode ===
+    whitelist_mode: true
+    allowed_can_ids: [0x100, 0x200]
+    
+    # === 15. Data Integrity ===
+    check_data_integrity: true
+    integrity_checksum_offset: 7         # Byte offset for XOR checksum (default: last byte)
+    
+    # === 16. Steering Range ===
+    check_steering_range: true
+    steering_min: -540.0                 # Min angle in degrees
+    steering_max: 540.0                  # Max angle in degrees
+    
+    # === 17. Repetition Detection ===
+    check_repetition: true
+    repetition_threshold: 10             # Max consecutive identical messages
+    
+    # === 18. Frame Type ===
+    frame_type: standard|extended        # Expected frame type
 ```
 
 ---
 
-## Rule Parameters
+## All 18 Rule Types
 
-### Required Parameters
+### Original Rule Types (7)
 
-#### `name` (string)
-Unique identifier for the rule. Used in alerts and logs.
+#### 1. `data_pattern` — Pattern Matching
 
-```yaml
-name: "Unauthorized Diagnostic Access"
-```
-
-#### `severity` (string)
-Alert severity level. Affects alert priority and filtering.
-
-Options:
-- `CRITICAL` - Immediate threat requiring urgent response
-- `HIGH` - Serious security violation
-- `MEDIUM` - Suspicious activity worth investigating
-- `LOW` - Minor anomaly or policy violation
-
-```yaml
-severity: HIGH
-```
-
-#### `description` (string)
-Human-readable description of what the rule detects.
-
-```yaml
-description: "Detects unauthorized OBD-II diagnostic requests"
-```
-
-#### `action` (string)
-Action to take when rule matches.
-
-Options:
-- `alert` - Generate alert and send notifications
-- `log` - Log to file only (no alerts)
-- `block` - Block message (not yet implemented)
-
-```yaml
-action: alert
-```
-
-### CAN ID Matching
-
-#### `can_id` (hex integer)
-Match exact CAN identifier.
-
-```yaml
-can_id: 0x7DF  # OBD-II request ID
-```
-
-#### `can_id_range` (array)
-Match range of CAN IDs (inclusive).
-
-```yaml
-can_id_range: [0x7E0, 0x7E7]  # UDS diagnostic range
-```
-
-**Note:** Use either `can_id` OR `can_id_range`, not both.
-
-### Data Pattern Matching
-
-#### `data_pattern` (string)
-Match hex data pattern. Use `*` as wildcard.
-
-```yaml
-# Match exact pattern
-data_pattern: "10 01"
-
-# Match with wildcard
-data_pattern: "27 * * *"  # Match 0x27 in first byte, any data after
-
-# Match partial pattern
-data_pattern: "DE AD BE EF"  # Must match first 4 bytes
-```
-
-#### `data_contains` (array)
-Match if data contains any of the specified patterns.
-
-```yaml
-data_contains:
-  - "27 01"  # Security Access - Request Seed
-  - "27 02"  # Security Access - Send Key
-  - "27 03"  # Security Access - Request Seed (Alt)
-```
-
-#### `data_byte_N` (hex integer)
-Match specific byte at position N (0-7).
-
-```yaml
-data_byte_0: 0xFF  # First byte must be 0xFF
-data_byte_1: 0x00  # Second byte must be 0x00
-```
-
-### Frequency Detection
-
-#### `max_frequency` (integer)
-Maximum allowed messages per `time_window`.
-
-```yaml
-can_id: 0x100
-max_frequency: 100    # Max 100 messages
-time_window: 1        # Per second
-```
-
-Detects DoS attacks and bus flooding.
-
-#### `global_message_rate` (integer)
-Maximum message rate across ALL CAN IDs.
-
-```yaml
-global_message_rate: 5000  # Max 5000 total messages/second
-time_window: 1
-```
-
-### Timing Analysis
-
-#### `check_timing` (boolean)
-Enable timing analysis for this rule.
-
-```yaml
-check_timing: true
-expected_interval: 100      # Messages should arrive every 100ms
-interval_variance: 10       # ±10ms tolerance
-```
-
-Detects replay attacks and timing violations.
-
-### Frame Validation
-
-#### `dlc_min` / `dlc_max` (integer 0-8)
-Validate Data Length Code.
-
-```yaml
-dlc_min: 8  # Must have at least 8 bytes
-dlc_max: 8  # Must have exactly 8 bytes
-```
-
-#### `validate_dlc` (boolean)
-Enable general DLC validation.
-
-```yaml
-validate_dlc: true
-```
-
-### Whitelist/Blacklist Mode
-
-#### `whitelist_mode` (boolean)
-Enable whitelist mode (only allowed IDs pass).
-
-```yaml
-whitelist_mode: true
-allowed_can_ids: [0x100, 0x200, 0x300]  # Only these IDs allowed
-```
-
-Any CAN ID not in the list will trigger an alert.
-
----
-
-## Detection Methods
-
-### 1. Simple ID Matching
-
-Detect messages from specific CAN ID:
-
-```yaml
-- name: "Suspicious ECU Communication"
-  can_id: 0x666
-  severity: HIGH
-  description: "Unknown ECU with suspicious ID"
-  action: alert
-```
-
-### 2. Pattern Matching
-
-Detect specific data patterns:
+Match hex data patterns in message payloads. Use `*` as byte wildcard.
 
 ```yaml
 - name: "UDS Programming Session"
   can_id: 0x7E0
-  data_pattern: "10 02"  # Programming session request
+  data_pattern: "10 02"
   severity: CRITICAL
   description: "ECU programming session initiated"
   action: alert
 ```
 
-### 3. Frequency-Based Detection
+Use `data_contains` for any-of matching:
 
-Detect high-frequency attacks:
+```yaml
+- name: "Security Access Attempt"
+  can_id_range: [0x7E0, 0x7E7]
+  data_contains: ["27 01", "27 02", "27 03"]
+  severity: HIGH
+  description: "UDS security access request/response"
+  action: alert
+```
+
+#### 2. `max_frequency` — Frequency Monitoring
+
+Detect excessive message rates for a specific CAN ID. Catches DoS/flooding attacks.
 
 ```yaml
 - name: "DoS Attack on Engine ECU"
@@ -315,27 +187,63 @@ Detect high-frequency attacks:
   action: alert
 ```
 
-### 4. Timing Analysis
+#### 3. `check_timing` — Timing Analysis
 
-Detect replay attacks via timing:
+Detect irregular message intervals. Supports three-tier adaptive thresholds:
+
+- **Tier 1** (`sigma_extreme`): Catches obvious attacks (DoS at 1ms vs 100ms baseline)
+- **Tier 2** (`sigma_moderate` + `consecutive_required`): Catches subtle sustained attacks
+- **Tier 3** (`payload_repetition_threshold`): Distinguishes attacks from normal jitter via payload analysis
 
 ```yaml
-- name: "Replay Attack Detection"
-  can_id: 0x200
+- name: "Interval Manipulation Attack"
+  can_id: 0x316
   check_timing: true
-  expected_interval: 100  # Normal: every 100ms
-  interval_variance: 5    # ±5ms tolerance
+  expected_interval: 100
+  interval_variance: 10
+  sigma_extreme: 3.0
+  sigma_moderate: 1.5
+  consecutive_required: 5
+  payload_repetition_threshold: 0.55
   severity: HIGH
   description: "Message timing inconsistent with normal pattern"
   action: alert
 ```
 
-### 5. Data Integrity
+See [Adaptive Timing Parameters](#adaptive-timing-parameters) for details on tuning.
 
-Validate checksums and counters:
+#### 4. `allowed_sources` — Source Validation
+
+Validate that messages come from authorized ECU sources.
 
 ```yaml
-- name: "Message Counter Error"
+- name: "Fake Engine ECU"
+  can_id: 0x7E8
+  allowed_sources: [0x7E0]
+  severity: CRITICAL
+  description: "Message from unauthorized source impersonating ECU"
+  action: alert
+```
+
+#### 5. `check_checksum` — Checksum Validation
+
+Validate message checksums against expected values.
+
+```yaml
+- name: "Checksum Failure"
+  can_id: 0x200
+  check_checksum: true
+  severity: MEDIUM
+  description: "Message checksum validation failed"
+  action: alert
+```
+
+#### 6. `check_counter` — Counter Validation
+
+Detect sequence counter anomalies (skipped, repeated, or out-of-order counters).
+
+```yaml
+- name: "Counter Sequence Error"
   can_id: 0x300
   check_counter: true
   severity: MEDIUM
@@ -343,90 +251,295 @@ Validate checksums and counters:
   action: alert
 ```
 
-### 6. Entropy Analysis
+#### 7. `entropy_threshold` — Entropy Analysis
 
-Detect encrypted or obfuscated data:
+Detect encrypted, randomized, or fuzzing data by measuring Shannon entropy.
 
 ```yaml
 - name: "High Entropy Data"
-  entropy_threshold: 7.5  # High randomness
+  entropy_threshold: 7.0
   severity: LOW
-  description: "Unusually random data (possible encryption)"
+  description: "Unusually random data (possible encryption or fuzzing)"
   action: log
-```
-
-### 7. Whitelist Enforcement
-
-Only allow known good IDs:
-
-```yaml
-- name: "Unknown CAN ID"
-  whitelist_mode: true
-  allowed_can_ids: [0x100, 0x110, 0x120, 0x200]
-  severity: MEDIUM
-  description: "Message from unauthorized CAN ID"
-  action: alert
 ```
 
 ---
 
-## Example Rules
+### Phase 1 — Critical Parameters (3)
 
-### Example 1: OBD-II Attack Detection
+Added December 2, 2025. Tests: `tests/test_rule_engine_phase1.py` (19/19 passing).
 
-```yaml
-- name: "Unauthorized OBD-II Access"
-  can_id: 0x7DF
-  severity: HIGH
-  description: "OBD-II diagnostic request detected"
-  action: alert
-  check_source: true
-  allowed_sources: []  # No sources allowed = always alert
-```
+#### 8. `validate_dlc` — DLC Validation
 
-### Example 2: ECU Impersonation
+Strict Data Length Code validation against CAN 2.0 specification:
+- DLC must be 0–8
+- Data length must match DLC
+- Optional min/max constraints
 
 ```yaml
-- name: "Fake Engine Control Unit"
-  can_id: 0x7E8  # Engine ECU response ID
-  allowed_sources: [0x7E0]  # Only from engine ECU
-  severity: CRITICAL
-  description: "Message from unauthorized source impersonating ECU"
-  action: alert
-```
-
-### Example 3: Safety System Manipulation
-
-```yaml
-- name: "Brake System Override"
-  can_id: 0x220  # Brake system ID
-  data_byte_0: 0xFF  # Override command
-  severity: CRITICAL
-  description: "Potential brake system manipulation"
-  action: alert
-```
-
-### Example 4: Fuzzing Detection
-
-```yaml
-- name: "CAN Fuzzing Attack"
-  dlc_min: 0
-  dlc_max: 8
+- name: "Invalid DLC"
   validate_dlc: true
-  entropy_threshold: 7.0
-  severity: MEDIUM
-  description: "Random/malformed CAN frames (fuzzing)"
+  dlc_min: 8
+  dlc_max: 8
+  severity: HIGH
+  description: "CAN frame with invalid or unexpected DLC"
   action: alert
 ```
 
-### Example 5: Bus Flooding
+#### 9. `check_frame_format` — Frame Format Validation
+
+Validates CAN frame structure:
+- CAN ID within valid range (11-bit standard, 29-bit extended)
+- DLC range check
+- Data length consistency
+- Error frame detection
+- Remote frame validation
+
+```yaml
+- name: "Malformed CAN Frame"
+  check_frame_format: true
+  severity: HIGH
+  description: "CAN frame failed structural validation"
+  action: alert
+```
+
+#### 10. `global_message_rate` — Bus Flooding Detection
+
+Monitors total message rate across **all** CAN IDs (not per-ID). Detects bus-wide DoS/flooding.
 
 ```yaml
 - name: "CAN Bus Flood"
   global_message_rate: 8000
   time_window: 1
   severity: CRITICAL
-  description: "CAN bus flooding attack detected"
+  description: "Total bus message rate exceeds safe threshold"
+  action: alert
+```
+
+---
+
+### Phase 2 — Important Parameters (4)
+
+Added December 2, 2025. Tests: `tests/test_rule_engine_phase2.py` (21/21 passing).
+
+#### 11. `check_source` — Enhanced Diagnostic Source Validation
+
+Validates diagnostic message sources for OBD-II and UDS protocols. Automatically identifies diagnostic CAN IDs (0x7DF, 0x7E0–0x7EF) and checks source authorization.
+
+```yaml
+- name: "Unauthorized OBD-II Access"
+  can_id: 0x7DF
+  check_source: true
+  allowed_sources: []  # No external sources allowed
+  severity: HIGH
+  description: "Diagnostic request from unauthorized source"
+  action: alert
+```
+
+#### 12. `check_replay` — Replay Attack Detection
+
+Detects replayed messages by tracking exact (CAN ID + data) signatures and timing.
+Triggers when identical messages repeat within `replay_time_threshold` seconds.
+
+```yaml
+- name: "Replay Attack"
+  can_id: 0x200
+  check_replay: true
+  replay_time_threshold: 1.0  # seconds
+  severity: HIGH
+  description: "Identical message replayed within suspicious time window"
+  action: alert
+```
+
+**Detection logic**: Alerts on 3+ identical messages within the window, or any exact replay within 100ms.
+
+#### 13. `data_byte_0`–`data_byte_7` — Byte-Level Validation
+
+Check specific byte positions for expected values. Useful for safety-critical command validation.
+
+```yaml
+- name: "Emergency Brake Override"
+  can_id: 0x220
+  data_byte_0: 0xFF  # Override command byte
+  data_byte_1: 0x00  # Should be zero in normal operation
+  severity: CRITICAL
+  description: "Brake system override command detected"
+  action: alert
+```
+
+#### 14. `whitelist_mode` — CAN ID Whitelist
+
+Only allow messages from known-good CAN IDs. Everything else triggers an alert.
+
+```yaml
+- name: "Unknown CAN ID"
+  whitelist_mode: true
+  allowed_can_ids: [0x100, 0x110, 0x120, 0x200, 0x316]
+  severity: MEDIUM
+  description: "Message from CAN ID not in whitelist"
+  action: alert
+```
+
+---
+
+### Phase 3 — Specialized Parameters (4)
+
+Added December 2, 2025. Tests: `tests/test_rule_engine_phase3.py` (21/21 passing).
+
+#### 15. `check_data_integrity` — Data Integrity Validation
+
+XOR checksum validation for safety-critical messages (brake, steering, airbag). Configurable checksum byte offset (defaults to last byte).
+
+```yaml
+- name: "Brake Data Integrity Failure"
+  can_id: 0x220
+  check_data_integrity: true
+  integrity_checksum_offset: 7  # Checksum in last byte
+  severity: CRITICAL
+  description: "Brake system message failed integrity check"
+  action: alert
+```
+
+#### 16. `check_steering_range` — Steering Angle Validation
+
+Validates steering angle values are within physically possible limits. Angle extracted from bytes 0–1 as signed 16-bit little-endian with 0.1° resolution.
+
+```yaml
+- name: "Steering Angle Manipulation"
+  can_id: 0x0C6
+  check_steering_range: true
+  steering_min: -540.0  # degrees
+  steering_max: 540.0   # degrees
+  severity: CRITICAL
+  description: "Steering angle outside physical limits"
+  action: alert
+```
+
+| Vehicle Type | Typical Range |
+|---|---|
+| Standard | ±540° (1.5 turns) |
+| Sports | ±720° (2 turns) |
+| Truck | ±360° (1 turn) |
+
+#### 17. `check_repetition` — Repetitive Pattern Detection
+
+Detects excessive consecutive identical messages, catching stuck sensors, pattern-based DoS, and fuzzing attempts.
+
+```yaml
+- name: "Repeated Data Pattern"
+  can_id: 0x100
+  check_repetition: true
+  repetition_threshold: 10  # Max identical messages in a row
+  severity: MEDIUM
+  description: "Excessive identical messages (stuck sensor or attack)"
+  action: alert
+```
+
+#### 18. `frame_type` — Frame Type Validation
+
+Enforces standard vs. extended frame type. Prevents attacks that switch frame formats to bypass filters.
+
+```yaml
+- name: "Extended Frame in Standard Network"
+  frame_type: standard
+  severity: HIGH
+  description: "Extended frame detected on standard-only network"
+  action: alert
+```
+
+---
+
+## Adaptive Timing Parameters
+
+The three-tier timing system (added Dec 9–14, 2025) provides fine-grained control over timing-based detection. These parameters are used alongside `check_timing: true`.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `sigma_extreme` | — | Tier 1: σ multiplier for extreme deviations (e.g., 2.5–3.3) |
+| `sigma_moderate` | — | Tier 2: σ multiplier for sustained violations (e.g., 1.3–1.7) |
+| `consecutive_required` | — | Tier 2: how many consecutive violations before alerting |
+| `payload_repetition_threshold` | — | Tier 3: fraction of identical payloads in window (0.0–1.0) |
+
+**How it works**:
+
+1. **Tier 1** — Single message with timing deviation > `sigma_extreme` × σ → immediate alert (DoS/flood)
+2. **Tier 2** — `consecutive_required` messages each deviating > `sigma_moderate` × σ → sustained attack alert
+3. **Tier 3** — If Tier 2 triggers, check payload repetition. If < `payload_repetition_threshold`, suppress (normal jitter). If ≥ threshold, confirm attack.
+
+**Tuning guidance**:
+- High-traffic CAN IDs (>10 msg/s): tighter `sigma_moderate` (1.3–1.4)
+- Low-traffic CAN IDs (<1 msg/s): looser `sigma_moderate` (1.7–1.9)
+- Use `scripts/generate_rules_from_baseline.py` to auto-generate thresholds from baseline traffic
+
+---
+
+## Example Rules
+
+### DoS Attack Detection (Multi-Layer)
+
+```yaml
+- name: "Per-ID DoS Attack"
+  can_id: 0x7E0
+  max_frequency: 500
+  time_window: 1
+  severity: CRITICAL
+  description: "Excessive messages targeting engine ECU"
+  action: alert
+
+- name: "Bus-Wide Flood"
+  global_message_rate: 8000
+  time_window: 1
+  severity: CRITICAL
+  description: "Total CAN bus flooding detected"
+  action: alert
+```
+
+### Safety System Protection
+
+```yaml
+- name: "Brake Override Attempt"
+  can_id: 0x220
+  data_byte_0: 0xFF
+  check_data_integrity: true
+  integrity_checksum_offset: 7
+  severity: CRITICAL
+  description: "Brake override with integrity check"
+  action: alert
+
+- name: "Steering Manipulation"
+  can_id: 0x0C6
+  check_steering_range: true
+  steering_min: -540.0
+  steering_max: 540.0
+  severity: CRITICAL
+  description: "Steering angle beyond physical limits"
+  action: alert
+```
+
+### Replay + Timing Combined
+
+```yaml
+- name: "Replay Attack on Brake"
+  can_id: 0x200
+  check_replay: true
+  replay_time_threshold: 0.5
+  check_timing: true
+  expected_interval: 50
+  interval_variance: 5
+  severity: HIGH
+  description: "Replayed brake message with timing violation"
+  action: alert
+```
+
+### Fuzzing Detection
+
+```yaml
+- name: "CAN Fuzzing"
+  validate_dlc: true
+  check_frame_format: true
+  entropy_threshold: 7.0
+  severity: MEDIUM
+  description: "Malformed or random data suggesting fuzzing"
   action: alert
 ```
 
@@ -437,91 +550,44 @@ Only allow known good IDs:
 ### 1. Start Simple
 Begin with basic rules and add complexity as needed.
 
-```yaml
-# Good: Simple and clear
-- name: "Diagnostic Request"
-  can_id: 0x7DF
-  severity: HIGH
-  description: "OBD-II request detected"
-  action: alert
-
-# Avoid: Overly complex first rule
-- name: "Complex Multi-Condition Rule"
-  can_id_range: [0x7E0, 0x7EF]
-  check_timing: true
-  check_counter: true
-  entropy_threshold: 6.5
-  max_frequency: 100
-  # ... too many conditions
-```
-
 ### 2. Use Descriptive Names
-Make rule names clear and searchable.
-
 ```yaml
 # Good
 name: "Unauthorized Steering Angle Manipulation"
-
 # Bad
 name: "Rule 42"
 ```
 
 ### 3. Set Appropriate Severity
-Match severity to actual threat level.
-
-- **CRITICAL**: Safety-critical systems (steering, brakes, airbags)
-- **HIGH**: Security violations (unauthorized access, ECU impersonation)
+- **CRITICAL**: Safety-critical (steering, brakes, airbags)
+- **HIGH**: Security violations (unauthorized access, impersonation)
 - **MEDIUM**: Policy violations (unexpected messages)
 - **LOW**: Anomalies that may be benign
 
-### 4. Document Your Rules
-Use clear descriptions that explain:
-- What the rule detects
-- Why it's important
-- What normal behavior looks like
-
+### 4. Use Priority for Early Exit
 ```yaml
-- name: "Engine RPM Manipulation"
-  can_id: 0x316
-  severity: HIGH
-  description: "Detects unauthorized engine RPM control messages. Normal RPM messages only come from ECU 0x7E0. This rule catches potential engine control hijacking attempts."
-  action: alert
+priority: 0   # Critical rules — evaluated first, can short-circuit
+priority: 5   # Normal rules (default)
+priority: 10  # Low-priority rules — skip if critical alert already found
 ```
 
-### 5. Test Before Deploying
-Always test new rules on sample data before deploying to production.
-
+### 5. Generate Thresholds from Data
+Instead of guessing thresholds, use baseline data:
 ```bash
-# Generate test data
-python scripts/generate_dataset.py --type normal
-
-# Test rule against data
-python main.py --mode replay --file data/synthetic/normal_traffic.json
+python scripts/generate_rules_from_baseline.py \
+  --input data/raw/attack_free_traffic.csv \
+  --output config/rules_adaptive.yaml
 ```
 
-### 6. Tune Thresholds
-Start conservative and adjust based on false positives.
-
+### 6. Combine Rule Types
+Multiple conditions on one rule are ANDed — all must match:
 ```yaml
-# Initial rule (may have false positives)
-max_frequency: 100
-
-# After testing, adjust
-max_frequency: 500  # Based on observed normal traffic
-```
-
-### 7. Use Comments
-Document complex rules with YAML comments.
-
-```yaml
-- name: "UDS Security Access"
-  can_id_range: [0x7E0, 0x7E7]
-  # Service 0x27 with sub-functions:
-  # 01, 03, 05 = Request Seed
-  # 02, 04, 06 = Send Key
-  data_pattern: "27 *"
-  severity: HIGH
-  description: "UDS security access attempt"
+- name: "Targeted Engine Attack"
+  can_id: 0x7E0
+  data_pattern: "10 02"
+  max_frequency: 100
+  check_timing: true
+  severity: CRITICAL
   action: alert
 ```
 
@@ -529,71 +595,37 @@ Document complex rules with YAML comments.
 
 ## Testing Rules
 
-### 1. Syntax Validation
-
-Check YAML syntax:
+### Syntax Validation
 
 ```bash
-# Python YAML validation
 python -c "import yaml; yaml.safe_load(open('config/rules.yaml'))"
-
-# Or use yamllint
-yamllint config/rules.yaml
 ```
 
-### 2. Load Test
-
-Test if rules load correctly:
+### Load Test
 
 ```bash
-python -c "from src.detection.rule_engine import RuleEngine; re = RuleEngine('config/rules.yaml'); print(f'Loaded {len(re.rules)} rules')"
+python -c "
+from src.detection.rule_engine import RuleEngine
+re = RuleEngine('config/rules.yaml')
+print(f'Loaded {len(re.rules)} rules')
+"
 ```
 
-### 3. Unit Testing
-
-Create test cases for your rules:
-
-```python
-# tests/test_my_rules.py
-def test_dos_detection():
-    engine = RuleEngine('config/rules.yaml')
-    
-    # Simulate DoS attack
-    for i in range(1500):
-        message = {
-            'timestamp': time.time(),
-            'can_id': 0x100,
-            'dlc': 8,
-            'data': [0x00] * 8
-        }
-        alerts = engine.analyze_message(message)
-    
-    # Should detect high frequency
-    assert len(alerts) > 0
-    assert any('frequency' in a.description.lower() for a in alerts)
-```
-
-### 4. Integration Testing
-
-Test with synthetic data:
+### Run the Test Suites
 
 ```bash
-# Generate attack data
-python scripts/generate_dataset.py --type dos --duration 10
+# All rule engine tests (61 tests)
+python -m pytest tests/test_rule_engine_phase1.py tests/test_rule_engine_phase2.py tests/test_rule_engine_phase3.py -v
 
-# Test detection
-python main.py --mode replay --file data/synthetic/dos_attack.json
-
-# Check alerts
-cat logs/alerts.json | grep "High Frequency"
+# Quick check
+python -m pytest tests/ -k "rule_engine" --tb=short
 ```
 
-### 5. Benchmark Performance
-
-Measure rule performance impact:
+### Integration Testing
 
 ```bash
-python scripts/benchmark.py --component rule-engine --data data/synthetic/normal_traffic.json
+# Test with a real dataset
+python scripts/test_rules_on_dataset.py --rules config/rules.yaml --data test_data/attack-free-1.csv
 ```
 
 ---
@@ -602,200 +634,45 @@ python scripts/benchmark.py --component rule-engine --data data/synthetic/normal
 
 ### Rule Not Triggering
 
-**Problem**: Rule never generates alerts even when expected.
-
-**Solutions**:
-1. Check CAN ID matching:
-   ```yaml
-   # Make sure CAN ID format is correct
-   can_id: 0x7DF  # Not 7DF or 0x7df
-   ```
-
-2. Verify data pattern:
-   ```yaml
-   # Patterns are space-separated hex
-   data_pattern: "10 01"  # Not "1001" or "10:01"
-   ```
-
-3. Check timing parameters:
-   ```yaml
-   # Ensure thresholds are reasonable
-   max_frequency: 1000  # Not too high
-   time_window: 1       # 1 second windows
-   ```
-
-4. Enable debug logging:
-   ```bash
-   python main.py -i can0 --log-level DEBUG
-   ```
+1. **Check CAN ID format**: Must be hex with `0x` prefix (`0x7DF`, not `7DF`)
+2. **Check data patterns**: Space-separated hex (`"10 01"`, not `"1001"`)
+3. **Check boolean parameters**: `check_timing: true`, not `check_timing: "yes"`
+4. **Enable debug logging**: `python main.py -i can0 --log-level DEBUG`
 
 ### Too Many False Positives
 
-**Problem**: Rule triggers on normal traffic.
-
-**Solutions**:
-1. Increase thresholds:
-   ```yaml
-   # Before
-   max_frequency: 100
-   
-   # After (more lenient)
-   max_frequency: 500
-   ```
-
-2. Add more specific conditions:
-   ```yaml
-   # Before: Too broad
-   can_id_range: [0x100, 0x7FF]
-   
-   # After: More specific
-   can_id_range: [0x7E0, 0x7E7]
-   data_pattern: "27 *"
-   ```
-
-3. Use `action: log` during testing:
-   ```yaml
-   action: log  # Log only, no alerts
-   ```
+1. **Increase thresholds** — Loosen `max_frequency`, widen `interval_variance`
+2. **Add Tier 3 payload check** — Add `payload_repetition_threshold: 0.55` to timing rules
+3. **Use baseline generation** — `scripts/generate_rules_from_baseline.py` for data-driven thresholds
+4. **Test with `action: log`** first, then switch to `alert`
 
 ### Performance Issues
 
-**Problem**: Rules slow down detection.
-
-**Solutions**:
-1. Reduce stateful rules:
-   ```yaml
-   # Timing checks are expensive
-   check_timing: true  # Use sparingly
-   ```
-
-2. Optimize frequency checks:
-   ```yaml
-   # Smaller time windows = less history
-   time_window: 1  # Not 60
-   ```
-
-3. Profile specific rules:
-   ```bash
-   python scripts/benchmark.py --component rule-engine
-   ```
-
-### Rule Loading Errors
-
-**Problem**: Rules fail to load.
-
-**Solutions**:
-1. Check YAML syntax:
-   ```bash
-   yamllint config/rules.yaml
-   ```
-
-2. Verify required fields:
-   ```yaml
-   # Must have: name, severity, description, action
-   - name: "Test"
-     severity: HIGH
-     description: "Test rule"
-     action: alert
-   ```
-
-3. Check for duplicate names:
-   ```yaml
-   # Each rule name must be unique
-   - name: "Unique Name 1"
-   - name: "Unique Name 2"
-   ```
-
----
-
-## Advanced Topics
-
-### Combining Multiple Conditions
-
-Rules with multiple conditions must match ALL conditions:
-
-```yaml
-- name: "Complex Attack Pattern"
-  can_id: 0x7E0           # AND
-  data_pattern: "27 01"   # AND
-  max_frequency: 10       # AND
-  time_window: 1          # All must match
-  severity: HIGH
-  description: "Complex multi-stage attack"
-  action: alert
-```
-
-### Dynamic Rule Updates
-
-Reload rules without restarting:
-
-```python
-# In code
-rule_engine.reload_rules()
-
-# Or via signal (future feature)
-kill -HUP <pid>
-```
-
-### Rule Priority
-
-Rules are evaluated in order. Put high-priority rules first:
-
-```yaml
-rules:
-  # Critical rules first
-  - name: "Safety System Attack"
-    severity: CRITICAL
-    # ...
-    
-  # Lower priority rules later
-  - name: "Minor Anomaly"
-    severity: LOW
-    # ...
-```
-
-### Statistical Confidence
-
-Some rules calculate confidence scores (0.0-1.0):
-
-- Pattern matches: Higher confidence
-- Frequency violations: Medium confidence
-- Single condition: Lower confidence
+1. **Reduce stateful rules** — `check_timing`, `check_replay`, `check_repetition` track state
+2. **Use smaller time windows** — `time_window: 1`, not `time_window: 60`
+3. **Set priorities** — Critical rules first, low-priority rules can be skipped via early exit
 
 ---
 
 ## Resources
 
-### Related Documentation
-- [Main README](../README.md)
-- [Getting Started Guide](../GETTING_STARTED.md)
-- [Configuration Guide](configuration.md)
-- [Test Suite](../tests/README.md)
-
-### Example Rules
-- `config/rules.yaml` - Production rules
-- `config/example_rules.yaml` - Templates
+### Configuration Files
+- `config/rules.yaml` — Production rules
+- `config/rules_adaptive.yaml` — Auto-generated adaptive rules
+- `config/example_rules.yaml` — Templates
+- `config/fuzzing_detection_rules.yaml` — Fuzzing-specific rules
 
 ### Tools
-- `scripts/generate_dataset.py` - Generate test data
-- `scripts/benchmark.py` - Performance testing
-- `tests/test_detection.py` - Rule engine tests
+- `scripts/generate_rules_from_baseline.py` — Generate rules from normal traffic
+- `scripts/test_rules_on_dataset.py` — Test rules against datasets
+- `scripts/benchmark.py` — Performance benchmarking
 
-### CAN Bus References
-- [SocketCAN Documentation](https://www.kernel.org/doc/html/latest/networking/can.html)
-- [UDS Protocol Specification](https://www.iso.org/standard/72439.html)
-- [OBD-II Standards](https://www.sae.org/standards/content/j1979_202104/)
-
----
-
-## Need Help?
-
-- **Bug Reports**: GitHub Issues
-- **Questions**: Check existing rules in `config/rules.yaml`
-- **Performance**: Run benchmarks with `scripts/benchmark.py`
-- **Testing**: See `tests/test_detection.py` for examples
+### Documentation
+- [Implementation Status](../implementation/IMPLEMENTATION_STATUS.md) — Current feature status
+- [Feature Inventory](../implementation/UNIMPLEMENTED_FEATURES.md) — All features with code references
+- [Timing Tuning](../implementation/TIMING_DETECTION_TUNING.md) — Statistical details on timing detection
 
 ---
 
-**Last Updated**: October 24, 2025  
-**Version**: 1.0.0
+**Last Updated**: March 1, 2026  
+**Version**: 2.0.0 — Covers all 18 rule types

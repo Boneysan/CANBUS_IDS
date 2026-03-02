@@ -9,8 +9,8 @@ rules_file: config/rules_adaptive.yaml  # Switched to adaptive rules (Dec 16, 20
 ml_threshold: 0.75
 detection_modes:
   - rule_based
-  # - ml_based  # Temporarily disabled - models need to be retrained in CANBUS_IDS context
-  # See docs/ML_MODEL_ISSUE.md for details
+  # - ml_based  # Deprecated for real-time (IsolationForest ~15 msg/s) — use decision_tree instead
+  # See docs/ml/ML_MODEL_ISSUE.md for details
 
 # Alert settings
 alerts:
@@ -29,6 +29,9 @@ capture:
   pcap_rotation_size: 100MB
 
 # Stage 3: Decision Tree ML Detector (Phase 3 - Option D)
+# NOTE: decision_tree.pkl is NOT shipped in the repo — train it first:
+#   python scripts/train_decision_tree.py --synthetic
+# Without it, Stage 3 silently falls back to Stages 1+2 only.
 decision_tree:
   enabled: true
   model_path: data/models/decision_tree.pkl
