@@ -129,8 +129,6 @@ CAN-IDS addresses these threats by monitoring CAN bus traffic in real-time and d
 
 ### Quick Start (Linux PC or Raspberry Pi 4)
 
-### Quick Start (Linux PC or Raspberry Pi 4)
-
 ```bash
 # 1. Update system
 sudo apt update && sudo apt upgrade -y
@@ -212,10 +210,10 @@ See the `config/` directory for configuration examples:
 can-ids/
 ├── README.md                 # This file
 ├── LICENSE                   # MIT License
+├── main.py                   # Main entry point
+├── setup.py                  # Package installation script
 ├── requirements.txt          # Python dependencies
 ├── requirements-dev.txt      # Development dependencies
-├── setup.py                  # Package installation script
-├── .gitignore               # Git ignore rules
 │
 ├── config/                   # Configuration files
 │   ├── can_ids.yaml         # Main system configuration
@@ -225,11 +223,25 @@ can-ids/
 │
 ├── src/                      # Source code
 │   ├── __init__.py
+│   ├── alerts/              # Alert handling
 │   ├── capture/             # Traffic capture modules
-│   ├── detection/           # Detection engines
-│   ├── preprocessing/       # Feature engineering
+│   ├── detection/           # Detection engines & feature engineering
 │   ├── models/              # ML model management
-│   └── alerts/              # Alert handling
+│   ├── monitoring/          # System monitoring
+│   └── preprocessing/       # Feature engineering
+│
+├── docs/                     # Documentation (organized by topic)
+│   ├── deployment/          # Raspberry Pi setup & deployment guides
+│   ├── development_logs/    # Session summaries & milestone logs
+│   ├── guides/              # User-facing guides & references
+│   ├── implementation/      # Feature implementation summaries
+│   ├── ml/                  # Machine learning docs & troubleshooting
+│   ├── performance/         # Performance optimization & benchmarks
+│   ├── planning/            # Architecture plans & roadmaps
+│   └── testing/             # Test results & testing guides
+│
+├── scripts/                  # Utility & test scripts
+├── tests/                    # Unit and integration tests
 │
 ├── raspberry-pi/            # Raspberry Pi specific files
 │   ├── systemd/            # Systemd service files
@@ -243,10 +255,9 @@ can-ids/
 │   └── samples/            # Example datasets for testing
 │
 ├── logs/                    # Log files (git-ignored)
-├── tests/                   # Unit and integration tests
-├── docs/                    # Additional documentation
-├── scripts/                 # Utility scripts
-└── main.py                  # Main entry point
+├── GAP_Analysis/            # Gap analysis reports
+├── academic_test_results/   # Academic benchmark results
+└── test_results/            # Test output artifacts
 ```
 
 ## Recent Developments (December 2025)
@@ -277,7 +288,7 @@ can-ids/
 - Files modified: `src/detection/rule_engine.py`, `scripts/generate_rules_from_baseline.py`
 - New field: `sigma_moderate` added to `DetectionRule` dataclass
 
-**Documentation**: See [TONIGHT_SUMMARY.md](TONIGHT_SUMMARY.md) for complete implementation details.
+**Documentation**: See [TONIGHT_SUMMARY.md](docs/development_logs/TONIGHT_SUMMARY.md) for complete implementation details.
 
 ---
 
@@ -306,7 +317,7 @@ Advanced three-tier detection system with payload-aware timing analysis:
 - Files modified: `src/detection/rule_engine.py`, `scripts/generate_rules_from_baseline.py`
 - New field: `payload_repetition_threshold` added to `DetectionRule` dataclass
 
-**Documentation**: See [DEVELOPMENT_SUMMARY_DEC14_2025.md](DEVELOPMENT_SUMMARY_DEC14_2025.md) for complete implementation details.
+**Documentation**: See [DEVELOPMENT_SUMMARY_DEC14_2025.md](docs/development_logs/DEVELOPMENT_SUMMARY_DEC14_2025.md) for complete implementation details.
 
 ---
 
@@ -320,11 +331,11 @@ Implementation of per-CAN-ID adaptive timing thresholds for improved detection a
 - **Dual-sigma architecture** with separate controls for extreme and moderate violations
 
 **Documentation:**
-- [Tonight's Work Summary](TONIGHT_SUMMARY.md) - Latest dual-sigma implementation (Dec 11)
-- [Adaptive Timing Implementation Summary](ADAPTIVE_TIMING_IMPLEMENTATION_SUMMARY.md) - Complete implementation overview
-- [Timing Detection Tuning Guide](TIMING_DETECTION_TUNING.md) - Technical deep-dive with statistical analysis
-- [7K msg/s Architecture Plan](BUILD_PLAN_7000_MSG_SEC.md) - Performance optimization roadmap
-- [Rule Generation Summary](RULE_GENERATION_SUMMARY.md) - Data-driven rule creation methodology
+- [Tonight's Work Summary](docs/development_logs/TONIGHT_SUMMARY.md) - Latest dual-sigma implementation (Dec 11)
+- [Adaptive Timing Implementation Summary](docs/implementation/ADAPTIVE_TIMING_IMPLEMENTATION_SUMMARY.md) - Complete implementation overview
+- [Timing Detection Tuning Guide](docs/implementation/TIMING_DETECTION_TUNING.md) - Technical deep-dive with statistical analysis
+- [7K msg/s Architecture Plan](docs/performance/BUILD_PLAN_7000_MSG_SEC.md) - Performance optimization roadmap
+- [Rule Generation Summary](docs/implementation/RULE_GENERATION_SUMMARY.md) - Data-driven rule creation methodology
 
 **Key Features:**
 - Automatic rule generation from baseline (attack-free) CAN traffic
@@ -346,7 +357,7 @@ Research-validated architecture for 7,000 msg/s sustained throughput:
 **References:**
 - Yu et al. (2023) - TCE-IDS cross-check filter architecture
 - Ming et al. (2023) - Threshold-adaptive message cycle detection
-- See [BUILD_PLAN_7000_MSG_SEC.md](BUILD_PLAN_7000_MSG_SEC.md) for complete design
+- See [BUILD_PLAN_7000_MSG_SEC.md](docs/performance/BUILD_PLAN_7000_MSG_SEC.md) for complete design
 
 ## Testing
 
