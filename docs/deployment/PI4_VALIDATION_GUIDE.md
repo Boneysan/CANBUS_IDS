@@ -115,19 +115,16 @@ ls -lh config/rules/rules_adaptive.yaml
 
 ### Step 2: Transfer Test Data to Pi
 
-**On your Ubuntu machine:**
+**On your development machine:**
 ```bash
-# Find test datasets in Vehicle_Models
-cd ~/Documents/GitHub/Vehicle_Models
-ls -lh data/raw/*.csv
-
-# Transfer to Pi (replace PI_IP with your Pi's IP address)
-scp data/raw/Normal-1.csv pi@PI_IP:~/CANBUS_IDS/test_data/
-scp data/raw/Normal-2.csv pi@PI_IP:~/CANBUS_IDS/test_data/
+# Transfer test data to Pi (replace PI_IP with your Pi's IP address)
+# The datasets below live in the test_data/ directory of this repository
+scp test_data/attack-free-1.csv pi@PI_IP:~/CANBUS_IDS/test_data/
+scp test_data/attack-free-2.csv pi@PI_IP:~/CANBUS_IDS/test_data/
 
 # Optional: Transfer attack datasets for comparison
-scp data/raw/DoS-1.csv pi@PI_IP:~/CANBUS_IDS/test_data/
-scp data/raw/Fuzzing-1.csv pi@PI_IP:~/CANBUS_IDS/test_data/
+scp test_data/DoS-1.csv pi@PI_IP:~/CANBUS_IDS/test_data/
+scp test_data/fuzzing-1.csv pi@PI_IP:~/CANBUS_IDS/test_data/
 ```
 
 **On Raspberry Pi:**
@@ -143,8 +140,8 @@ cd ~/CANBUS_IDS
 source .venv/bin/activate
 
 # Test with adaptive rules on normal traffic
-python3 scripts/comprehensive_test.py \
-    test_data/Normal-1.csv \
+python3 scripts/benchmarks/comprehensive_test.py \
+    test_data/attack-free-1.csv \
     --rules-only \
     --output test_results/adaptive_rules_validation.json
 
@@ -173,8 +170,8 @@ Detection Results:
 sed -i 's/rules_adaptive.yaml/rules.yaml/' config/can_ids.yaml
 
 # Run test again
-python3 scripts/comprehensive_test.py \
-    test_data/Normal-1.csv \
+python3 scripts/benchmarks/comprehensive_test.py \
+    test_data/attack-free-1.csv \
     --rules-only \
     --output test_results/generic_rules_comparison.json
 
@@ -218,8 +215,10 @@ grep -A 10 "prefilter:" config/can_ids.yaml
 
 ```bash
 # Test pre-filter on Pi 4 with real data
-python3 scripts/test_prefilter_real.py \
-    test_data/Normal-1.csv \
+python3 scripts/benchmarks/comprehensive_test.py \
+    test_data/attack-free-1.csv \
+    --prefilter \
+    --rules-only \
     --output test_results/prefilter_pi4_performance.json
 
 # Check results
@@ -256,8 +255,8 @@ Comparison to Ubuntu/x86:
 
 ```bash
 # Test with all optimizations enabled
-python3 scripts/comprehensive_test.py \
-    test_data/Normal-1.csv \
+python3 scripts/benchmarks/comprehensive_test.py \
+    test_data/attack-free-1.csv \
     --prefilter \
     --rules-only \
     --output test_results/full_system_pi4.json
@@ -302,11 +301,11 @@ Pipeline Breakdown:
 cd ~/Documents/GitHub/CANBUS_IDS
 source .venv/bin/activate
 
-# Train models with PCA
-python3 scripts/train_with_pca.py \
-    --data ../Vehicle_Models/data/raw/Normal-1.csv \
+# Train models with PCA (uses attack-free-1.csv from this repo's test_data/)
+python3 scripts/training/train_with_pca.py \
+    --data test_data/attack-free-1.csv \
     --components 15 \
-    --contamination 0.02 \
+    --contamination 0.20 \
     --output data/models/
 
 # Files created:
@@ -328,15 +327,16 @@ scp data/models/model_metadata.json pi@PI_IP:~/CANBUS_IDS/data/models/
 
 **On Raspberry Pi:**
 ```bash
-# Enable ML detection in config
-sed -i 's/# - ml_based/  - ml_based/' config/can_ids.yaml
-
-# Update model path to use PCA model
-sed -i 's|path: data/models/.*|path: data/models/model_with_pca.joblib|' config/can_ids.yaml
+# NOTE: IsolationForest (ml_based) is deprecated — the Decision Tree detector
+# is the recommended ML approach (8,000+ msg/s vs ~15 msg/s for IsolationForest).
+# To test PCA-compressed IsolationForest anyway, edit config/can_ids.yaml manually:
+#   ml_model:
+#     path: data/models/model_with_pca.joblib
+# Then run main.py in replay mode:
 
 # Run ML performance test
-python3 scripts/comprehensive_test.py \
-    test_data/Normal-1.csv \
+python3 scripts/benchmarks/comprehensive_test.py \
+    test_data/attack-free-1.csv \
     --ml-enabled \
     --output test_results/ml_with_pca_pi4.json
 
@@ -375,14 +375,14 @@ With PCA (optimized):
 
 ```bash
 # Test DoS attack detection
-python3 scripts/comprehensive_test.py \
+python3 scripts/benchmarks/comprehensive_test.py \
     test_data/DoS-1.csv \
     --rules-only \
     --output test_results/dos_detection_pi4.json
 
 # Test Fuzzing attack detection
-python3 scripts/comprehensive_test.py \
-    test_data/Fuzzing-1.csv \
+python3 scripts/benchmarks/comprehensive_test.py \
+    test_data/fuzzing-1.csv \
     --rules-only \
     --output test_results/fuzzing_detection_pi4.json
 
@@ -419,13 +419,13 @@ cat test_results/fuzzing_detection_pi4.json | grep -A 3 "detection_rate"
 ### Generate Comprehensive Report
 
 ```bash
-# Run all tests and generate summary
-python3 scripts/generate_pi4_validation_report.py \
-    --test-dir test_results/ \
-    --output PI4_VALIDATION_RESULTS.md
-
-# View results
-cat PI4_VALIDATION_RESULTS.md
+# Review individual test result files
+ls test_results/
+cat test_results/adaptive_rules_validation.json
+cat test_results/prefilter_pi4_performance.json
+cat test_results/full_system_pi4.json
+cat test_results/dos_detection_pi4.json
+cat test_results/fuzzing_detection_pi4.json
 ```
 
 **Expected Report Sections:**
@@ -514,8 +514,9 @@ vcgencmd get_throttled
 ### Issue: Low Throughput
 
 ```bash
-# Disable ML to test rules-only
-sed -i 's/  - ml_based/# - ml_based/' config/can_ids.yaml
+# Disable Decision Tree ML to test rules-only; edit config/can_ids.yaml:
+# decision_tree:
+#   enabled: false
 
 # Increase batch size
 # Edit config/can_ids.yaml:

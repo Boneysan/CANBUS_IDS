@@ -3,8 +3,8 @@
 **Document Created:** November 14, 2025  
 **Target Hardware:** Raspberry Pi 4 Model B  
 **CAN Interface:** MCP2515-based CAN HAT (16MHz oscillator)  
-**User:** boneysan  
-**Project Path:** /home/boneysan/Documents/Github/CANBUS_IDS  
+**User:** `<your-username>`  
+**Project Path:** `/home/<your-username>/Documents/GitHub/CANBUS_IDS`  
 
 ---
 
@@ -64,8 +64,6 @@ This script performs the following:
 - Installs can-utils package
 - Creates `/etc/network/interfaces.d/can0` for interface auto-configuration
 
-**Note:** The MCP2515 was detected with a 16MHz oscillator (not the default 12MHz in the script).
-
 #### 2.2 Reboot System
 
 ```bash
@@ -119,7 +117,7 @@ Expected output should show:
 #### 3.1 Create Virtual Environment
 
 ```bash
-cd /home/boneysan/Documents/Github/CANBUS_IDS
+cd ~/Documents/GitHub/CANBUS_IDS
 python3 -m venv venv
 ```
 
@@ -141,18 +139,18 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Installed packages:
-- python-can (4.6.1)
-- scikit-learn (1.7.2)
-- numpy (2.3.4)
-- scipy (1.16.3)
-- PyYAML (6.0.3)
-- colorlog (6.10.1)
-- joblib (1.5.2)
-- threadpoolctl (3.6.0)
-- typing_extensions (4.15.0)
-- wrapt (1.17.3)
-- packaging (25.0)
+Installed packages (versions will vary at install time):
+- python-can
+- scikit-learn (1.3.0+)
+- numpy (1.24.0+)
+- scipy (1.10.0+)
+- PyYAML
+- colorlog
+- joblib
+- threadpoolctl
+- typing_extensions
+- wrapt
+- packaging
 
 #### 3.5 Install CAN-IDS Package
 
@@ -180,6 +178,7 @@ This script performs the following optimizations:
 
 **Step 2: Boot Configuration Optimization**
 Adds to `/boot/firmware/config.txt`:
+
 ```
 # CAN-IDS Optimizations
 dtoverlay=disable-bt
@@ -232,11 +231,23 @@ If no errors appear, the system is working correctly.
 
 ### 7. Systemd Service Configuration
 
-#### 7.1 Create Custom Service File
+#### 7.1 Copy and Customise the Shipped Service File
 
-Create a customized service file with correct paths:
+The repository ships a service file at `raspberry-pi/systemd/can-ids.service`. Copy it and edit the
+paths and username for your installation:
 
-**File:** `/home/boneysan/Documents/Github/CANBUS_IDS/can-ids.service`
+```bash
+cp raspberry-pi/systemd/can-ids.service ~/can-ids.service
+nano ~/can-ids.service
+```
+
+Replace the placeholder paths with your actual install directory and username, then install:
+
+```bash
+sudo cp ~/can-ids.service /etc/systemd/system/can-ids.service
+```
+
+**Example service excerpt (adapt to your username and install path):**
 
 ```ini
 [Unit]
@@ -246,14 +257,14 @@ After=network.target multi-user.target
 
 [Service]
 Type=simple
-User=boneysan
-Group=boneysan
-WorkingDirectory=/home/boneysan/Documents/Github/CANBUS_IDS
-Environment="PATH=/home/boneysan/Documents/Github/CANBUS_IDS/venv/bin:/usr/local/bin:/usr/bin:/bin"
+User=<your-username>
+Group=<your-username>
+WorkingDirectory=/home/<your-username>/Documents/GitHub/CANBUS_IDS
+Environment="PATH=/home/<your-username>/Documents/GitHub/CANBUS_IDS/venv/bin:/usr/local/bin:/usr/bin:/bin"
 ExecStartPre=/bin/sleep 10
 ExecStartPre=/sbin/ip link set can0 type can bitrate 500000
 ExecStartPre=/sbin/ip link set up can0
-ExecStart=/home/boneysan/Documents/Github/CANBUS_IDS/venv/bin/python /home/boneysan/Documents/Github/CANBUS_IDS/main.py -i can0 --config /home/boneysan/Documents/Github/CANBUS_IDS/config/can_ids_rpi4.yaml
+ExecStart=/home/<your-username>/Documents/GitHub/CANBUS_IDS/venv/bin/python /home/<your-username>/Documents/GitHub/CANBUS_IDS/main.py -i can0 --config /home/<your-username>/Documents/GitHub/CANBUS_IDS/config/can_ids_rpi4.yaml
 ExecStop=/sbin/ip link set down can0
 Restart=on-failure
 RestartSec=30
@@ -266,7 +277,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/boneysan/Documents/Github/CANBUS_IDS/logs /home/boneysan/Documents/Github/CANBUS_IDS/data
+ReadWritePaths=/home/<your-username>/Documents/GitHub/CANBUS_IDS/logs /home/<your-username>/Documents/GitHub/CANBUS_IDS/data
 
 # Resource limits
 MemoryLimit=512M
@@ -283,8 +294,6 @@ sudo cp can-ids.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable can-ids.service
 ```
-
-The service is now configured to start automatically on boot.
 
 ---
 
@@ -339,7 +348,7 @@ sudo systemctl disable can-ids.service
 To run CAN-IDS manually without the service:
 
 ```bash
-cd /home/boneysan/Documents/Github/CANBUS_IDS
+cd ~/Documents/GitHub/CANBUS_IDS
 source venv/bin/activate
 python main.py -i can0 --config config/can_ids_rpi4.yaml
 ```
@@ -364,7 +373,7 @@ Key Raspberry Pi 4 optimizations in this config:
 
 ### Detection Rules
 
-**File:** `config/rules.yaml`
+**File:** `config/rules/rules_adaptive.yaml` (and other rule variants in `config/rules/`)
 
 Contains detection rules for:
 - DoS attacks
@@ -527,14 +536,19 @@ Customize `config/rules.yaml` for your specific CAN bus environment.
 
 ### 5. Train ML Model (Optional)
 
-If using ML-based detection:
+If using Decision Tree ML detection:
+```bash
+# Train the Decision Tree model on baseline traffic
+source venv/bin/activate
+python scripts/training/train_decision_tree.py --synthetic
+# Copy resulting data/models/decision_tree.pkl to the Pi
+```
+
+If using IsolationForest (legacy, ~15 msg/s on Pi 4):
 ```bash
 # Collect baseline normal traffic (24-48 hours)
 candump -l can0
-
-# Train model
-source venv/bin/activate
-python src/models/train_model.py --input candump-*.log
+# This is research territory — see docs/ml/ for details
 ```
 
 ---
@@ -554,7 +568,7 @@ Expected performance on Raspberry Pi 4 (4GB):
 ## Security Considerations
 
 The systemd service is configured with security hardening:
-- Runs as unprivileged user (boneysan)
+- Runs as unprivileged user (`<your-username>`)
 - `NoNewPrivileges=true` - Prevents privilege escalation
 - `PrivateTmp=true` - Isolated /tmp directory
 - `ProtectSystem=strict` - Read-only system directories

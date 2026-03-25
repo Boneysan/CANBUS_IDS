@@ -17,7 +17,8 @@ echo "Step 1: Enabling SPI interface..."
 raspi-config nonint do_spi 0
 
 echo "Step 2: Configuring device tree overlay..."
-CONFIG_FILE="/boot/config.txt"
+# Raspberry Pi OS Bookworm stores boot config at /boot/firmware/config.txt
+CONFIG_FILE="/boot/firmware/config.txt"
 
 # Backup config
 cp $CONFIG_FILE ${CONFIG_FILE}.backup.$(date +%Y%m%d_%H%M%S)
@@ -31,7 +32,7 @@ else
 
 # CAN-IDS MCP2515 Configuration
 dtparam=spi=on
-dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25
+dtoverlay=mcp2515-can0,oscillator=16000000,interrupt=25
 dtoverlay=spi-bcm2835
 EOF
 fi

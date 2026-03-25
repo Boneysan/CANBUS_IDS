@@ -71,7 +71,7 @@ sudo apt install python3-dev build-essential -y
 cd ~/Documents
 mkdir -p GitHub
 cd GitHub
-git clone https://github.com/yourusername/CANBUS_IDS.git
+git clone https://github.com/Boneysan/CANBUS_IDS.git
 cd CANBUS_IDS
 ```
 
@@ -167,19 +167,17 @@ nano config/can_ids.yaml
 
 **Key settings to verify:**
 ```yaml
-interface: can0  # Match your CAN interface
+interface: can0           # Match your CAN interface
 bustype: socketcan
 
-# Enable ML detection (if you have models)
-ml_detection:
-  enabled: true  # Set to false if no models available
-  contamination: 0.02
-  model_path: data/models/your_model.pkl
+# Detection rules (required)
+rules_file: config/rules/rules_adaptive.yaml
 
-# Rule engine (should be enabled)
-rule_engine:
-  enabled: true
-  rules_file: config/rules.yaml
+# Stage 3: Decision Tree ML (optional — requires trained model)
+# Train first: python scripts/training/train_decision_tree.py --synthetic
+decision_tree:
+  enabled: false          # Set to true once model is trained
+  model_path: data/models/decision_tree.pkl
 ```
 
 ---
@@ -281,13 +279,13 @@ Run the built-in benchmark tool to measure detailed performance:
 
 ```bash
 # Generate synthetic test dataset (10,000 messages)
-python scripts/generate_dataset.py \
+python scripts/data/generate_dataset.py \
     --type normal \
     --count 10000 \
     --output data/synthetic/test_traffic.json
 
 # Run benchmark on synthetic data
-python scripts/benchmark.py \
+python scripts/benchmarks/benchmark.py \
     --messages data/synthetic/test_traffic.json \
     --config config/can_ids.yaml
 ```
@@ -310,10 +308,7 @@ sudo ip link add dev vcan0 type vcan
 sudo ip link set up vcan0
 
 # Generate high-rate traffic (separate terminal)
-# This sends messages as fast as possible
-can-utils/scripts/generate_high_speed_traffic.sh vcan0
-
-# Or use cangen for controlled rates
+# Use cangen for controlled rates
 cangen vcan0 -g 0.2  # 0.2ms gap = ~5000 msg/s
 
 # Monitor with CAN-IDS
@@ -326,16 +321,7 @@ The repository includes several performance testing scripts:
 
 ```bash
 # Test interface connectivity and traffic rate
-python scripts/can_traffic_test.py --interface can0 --monitor --duration 30
-
-# Test multi-stage detection pipeline
-python scripts/test_multistage_integration.py
-
-# Test with real attack patterns
-python scripts/test_real_attacks.py
-
-# Full integration test
-python scripts/test_full_pipeline.py
+python scripts/benchmarks/can_traffic_test.py --interface can0 --monitor --duration 30
 ```
 
 ### Expected Performance on Raspberry Pi 4
@@ -458,7 +444,7 @@ To run CAN-IDS automatically on boot:
 
 ```bash
 # Copy service file
-sudo cp can-ids.service /etc/systemd/system/
+sudo cp raspberry-pi/systemd/can-ids.service /etc/systemd/system/can-ids.service
 
 # Edit paths to match your installation
 sudo nano /etc/systemd/system/can-ids.service
@@ -531,9 +517,9 @@ If you've trained models in the Vehicle_Models workspace on another machine:
 lsblk -f | grep media
 
 # Copy the best performing models to USB
-cp /home/mike/Documents/GitHub/Vehicle_Models/models/hybrid_crosscheck_optimized.joblib /media/username/USB_NAME/
-cp /home/mike/Documents/GitHub/Vehicle_Models/models/improved_svm_high_recall.joblib /media/username/USB_NAME/
-cp /home/mike/Documents/GitHub/Vehicle_Models/models/multistage/adaptive_load_shedding.joblib /media/username/USB_NAME/
+cp /path/to/your/trained/models/hybrid_crosscheck_optimized.joblib /media/username/USB_NAME/
+cp /path/to/your/trained/models/improved_svm_high_recall.joblib /media/username/USB_NAME/
+cp /path/to/your/trained/models/multistage/adaptive_load_shedding.joblib /media/username/USB_NAME/
 
 # Verify files copied
 ls -lh /media/username/USB_NAME/*.joblib
@@ -555,13 +541,13 @@ lsblk -f | grep media
 mkdir -p ~/Documents/GitHub/CANBUS_IDS/data/models
 
 # Copy models from USB (adjust USB path as needed)
-cp /media/boneysan/USB_NAME/*.joblib ~/Documents/GitHub/CANBUS_IDS/data/models/
+cp /media/$USER/USB_NAME/*.joblib ~/Documents/GitHub/CANBUS_IDS/data/models/
 
 # Verify files copied
 ls -lh ~/Documents/GitHub/CANBUS_IDS/data/models/
 
 # Eject USB safely
-umount /media/boneysan/USB_NAME
+umount /media/$USER/USB_NAME
 ```
 
 ### Option 2: Copy via SCP (Network Transfer)
@@ -573,16 +559,16 @@ If your Pi is on the same network:
 # Replace 'raspberrypi.local' with your Pi's hostname or IP
 
 # Copy hybrid model
-scp /home/mike/Documents/GitHub/Vehicle_Models/models/hybrid_crosscheck_optimized.joblib \
-    boneysan@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
+scp /path/to/your/trained/models/hybrid_crosscheck_optimized.joblib \
+    <username>@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
 
 # Copy SVM model
-scp /home/mike/Documents/GitHub/Vehicle_Models/models/improved_svm_high_recall.joblib \
-    boneysan@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
+scp /path/to/your/trained/models/improved_svm_high_recall.joblib \
+    <username>@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
 
 # Copy multistage model
-scp /home/mike/Documents/GitHub/Vehicle_Models/models/multistage/adaptive_load_shedding.joblib \
-    boneysan@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
+scp /path/to/your/trained/models/multistage/adaptive_load_shedding.joblib \
+    <username>@raspberrypi.local:~/Documents/GitHub/CANBUS_IDS/data/models/
 ```
 
 ### Configure ML Detection
@@ -598,7 +584,7 @@ nano ~/Documents/GitHub/CANBUS_IDS/config/can_ids.yaml
 ```yaml
 ml_detection:
   enabled: true
-  contamination: 0.02
+  contamination: 0.20
   model_path: data/models/hybrid_crosscheck_optimized.joblib
 ```
 
@@ -606,7 +592,7 @@ ml_detection:
 ```yaml
 ml_detection:
   enabled: true
-  contamination: 0.02
+  contamination: 0.20
   model_path: data/models/adaptive_load_shedding.joblib
 ```
 
@@ -614,7 +600,7 @@ ml_detection:
 ```yaml
 ml_detection:
   enabled: true
-  contamination: 0.02
+  contamination: 0.20
   model_path: data/models/improved_svm_high_recall.joblib
 ```
 
@@ -769,7 +755,7 @@ CANBUS_IDS/
 ├── .venv/                          # Python virtual environment
 ├── config/
 │   ├── can_ids.yaml               # Main configuration
-│   └── rules.yaml                 # Detection rules
+│   └── rules/                     # Detection rules directory
 ├── data/
 │   ├── models/                    # ML models (if used)
 │   └── raw/                       # Training data
@@ -782,8 +768,7 @@ CANBUS_IDS/
 │   └── systemd/
 │       └── can-ids.service        # Service file
 ├── main.py                        # Main entry point
-├── requirements.txt               # Python dependencies
-└── can-ids.service                # Systemd service file
+└── requirements.txt               # Python dependencies
 ```
 
 ---

@@ -1,5 +1,5 @@
 # Raspberry Pi Boot Configuration Example for CAN-IDS
-# Copy relevant sections to /boot/config.txt
+# Copy relevant sections to /boot/firmware/config.txt  (Raspberry Pi OS Bookworm and later)
 
 # ============================
 # MCP2515 CAN HAT Configuration
@@ -10,11 +10,11 @@ dtparam=spi=on
 
 # MCP2515 CAN controller overlay
 # Adjust oscillator frequency and interrupt pin for your specific HAT
-dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25
+dtoverlay=mcp2515-can0,oscillator=16000000,interrupt=25
 dtoverlay=spi-bcm2835
 
 # For dual CAN setup (if using two MCP2515 controllers)
-#dtoverlay=mcp2515-can1,oscillator=12000000,interrupt=24
+#dtoverlay=mcp2515-can1,oscillator=16000000,interrupt=24
 
 # ============================
 # Performance Optimizations

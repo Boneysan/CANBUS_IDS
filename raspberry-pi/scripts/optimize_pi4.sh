@@ -31,7 +31,8 @@ for service in "${services_to_disable[@]}"; do
 done
 
 echo "Step 2: Optimizing boot configuration..."
-CONFIG_FILE="/boot/config.txt"
+# Raspberry Pi OS Bookworm stores boot config at /boot/firmware/config.txt
+CONFIG_FILE="/boot/firmware/config.txt"
 
 # Backup config
 cp $CONFIG_FILE ${CONFIG_FILE}.backup.$(date +%Y%m%d_%H%M%S)

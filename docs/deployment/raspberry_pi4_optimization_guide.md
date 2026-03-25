@@ -1,5 +1,12 @@
 # CAN-IDS Raspberry Pi 4 Optimization Guide
 
+> **Note:** This document is a design and planning guide written in October 2025. Many of the code
+> snippets, proposed config keys (`thermal_monitoring`, `batch_writing`, etc.), and referenced
+> scripts/test files (`scripts/test_alert_generation.py`, `tests/endurance_test.py`, etc.) describe
+> **proposed but not yet implemented** improvements. Treat this guide as an architectural roadmap
+> rather than a step-by-step operational guide. The hardware-level recommendations (cooling,
+> watchdog, tmpfs logs) are all valid and implemented — see `optimize_pi4.sh`.
+
 **Document Version:** 1.0  
 **Date:** October 28, 2025  
 **Target Platform:** Raspberry Pi 4 Model B (8GB RAM)  
@@ -813,15 +820,15 @@ python tests/generate_pi4_report.py
 
 #### 1. Functional Tests
 ```bash
+# Deployment checklist scripts marked with [NOT YET IMPLEMENTED] do not
+# exist in the repo — they describe proposed additions.
+
 # Test CAN interface
 candump can0
 
 # Test CAN-IDS startup
 sudo systemctl start can-ids
 sudo systemctl status can-ids
-
-# Test alert generation
-python scripts/test_alert_generation.py
 
 # Test log rotation
 sudo logrotate -f /etc/logrotate.d/can-ids
@@ -834,23 +841,17 @@ htop
 iotop
 watch -n 1 'vcgencmd measure_temp && vcgencmd get_throttled'
 
-# Run benchmark suite
-python scripts/pi4_benchmark.py
-
-# Validate message processing rate
-python scripts/test_message_rate.py
+# [NOT YET IMPLEMENTED] scripts below are proposed additions:
+# python scripts/pi4_benchmark.py
+# python scripts/test_message_rate.py
 ```
 
 #### 3. Long-term Stability
 ```bash
-# 24-hour stress test
-python tests/endurance_test.py --duration 24
-
-# Memory leak detection
-python tests/memory_leak_test.py --duration 12
-
-# Thermal stability test
-python tests/thermal_stability_test.py
+# [NOT YET IMPLEMENTED] Long-term test scripts below are proposed additions:
+# python tests/endurance_test.py --duration 24
+# python tests/memory_leak_test.py --duration 12
+# python tests/thermal_stability_test.py
 ```
 
 ### Production Monitoring
@@ -942,7 +943,8 @@ rules_file: config/rules/rules.yaml
 ml_threshold: 0.75
 detection_modes:
   - rule_based
-  - ml_based
+  # decision_tree is the recommended ML approach — see decision_tree: block
+  # ml_based (IsolationForest) is DEPRECATED — ~15 msg/s on Pi4
 
 # Alert settings
 alerts:
