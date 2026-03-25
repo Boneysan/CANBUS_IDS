@@ -1,0 +1,37 @@
+{
+  "duration_seconds": 20.292263507843018,
+  "messages_processed": 226166,
+  "messages_dropped": 0,
+  "drop_rate_percent": 0.0,
+  "throughput_msg_per_sec": 11145.42987836651,
+  "alerts_generated": 904664,
+  "alert_rate_percent": 400.0,
+  "alerts_by_severity": {
+    "MEDIUM": 678498,
+    "LOW": 226166
+  },
+  "alerts_by_type": {
+    "Checksum Validation Failure": 226166,
+    "Counter Sequence Error": 226166,
+    "High Entropy Data": 226166,
+    "Unknown CAN ID": 226166
+  },
+  "detection_accuracy": {
+    "true_positives": 0,
+    "false_positives": 226166,
+    "true_negatives": 0,
+    "false_negatives": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1_score": 0.0,
+    "accuracy": 0.0
+  },
+  "latency_ms": {
+    "mean": 0.07120140854390135,
+    "median": 0.06985664367675781,
+    "min": 0.06508827209472656,
+    "max": 1.9679069519042969,
+    "p95": 0.07605552673339844,
+    "p99": 0.08893013000488281
+  }
+}

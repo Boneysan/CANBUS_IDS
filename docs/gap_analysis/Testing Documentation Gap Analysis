@@ -1,0 +1,538 @@
+# Testing Documentation Gap Analysis
+**Date:** January 4, 2026  
+**Purpose:** Identify gaps between conducted tests and documented results in CANBUS_IDS testing folders  
+**Scope:** Review of academic_test_results/ and test_results/ directories  
+
+---
+
+## Executive Summary
+
+**Overall Finding:** Significant testing has been conducted but many test results lack complete documentation of detection performance metrics (precision, recall, FP rate). System metrics (CPU, memory, throughput) are often captured, but attack detection effectiveness is frequently missing.
+
+**Critical Gap:** Multiple attack types show evidence of system testing (datasets processed, system metrics recorded) but **lack documented detection performance results**, making it impossible to report accuracy claims.
+
+---
+
+## Gap Priority Matrix
+
+| Test Category | System Testing | Performance Metrics | Documentation | Gap Severity |
+|---------------|----------------|---------------------|---------------|--------------|
+| **DoS Attacks** | ✅ Complete | ✅ Complete | ✅ Complete | **NONE** |
+| **Fuzzing Attacks** | ✅ Complete | ✅ Complete | ✅ Complete | **NONE** |
+| **Interval Attacks** | ✅ Complete | ✅ Complete | ✅ Complete | **NONE** |
+| **RPM Attacks** | ✅ Complete | ❌ **MISSING** | ⚠️ Partial | 🔴 **HIGH** |
+| **Replay Attacks** | ❌ Not Found | ❌ **MISSING** | ❌ None | 🔴 **CRITICAL** |
+| **Speed Attacks** | ❌ Not Found | ❌ **MISSING** | ❌ None | 🔴 **CRITICAL** |
+| **Accessory Attacks** | ✅ Complete | ❌ **MISSING** | ⚠️ Partial | ⚠️ **MEDIUM** |
+| **Force Neutral** | ✅ Complete | ❌ **MISSING** | ⚠️ Partial | ⚠️ **MEDIUM** |
+| **Standstill Attacks** | ✅ Complete | ⚠️ Partial | ⚠️ Partial | ⚠️ **MEDIUM** |
+
+---
+
+## Detailed Gap Analysis by Attack Type
+
+### 1. RPM Manipulation Attacks 🔴 HIGH PRIORITY GAP
+
+**Current White Paper Claim:**
+> "RPM Manipulation: 2 datasets available (rpm-1.csv, rpm-2.csv) but **UNTESTED**"
+
+**Actual Status:** **SYSTEM TESTED BUT DETECTION PERFORMANCE NOT DOCUMENTED**
+
+**Evidence of Testing:**
+- **Location:** `academic_test_results/batch_set01_20251203_133029/rpm-1/20251203_150424/`
+- **Test Date:** December 3, 2025, 15:18:09
+- **Duration:** 823 seconds (13.7 minutes)
+- **Messages Processed:** 494 samples
+
+**System Metrics Captured:**
+```json
+{
+  "cpu_percent": {
+    "mean": 24.8%,
+    "max": 30.1%,
+    "min": 9.6%
+  },
+  "memory_rss_mb": {
+    "mean": 419.1 MB,
+    "max": 467.1 MB
+  },
+  "temperature_c": {
+    "mean": 50.9°C,
+    "max": 53.0°C
+  },
+  "throttling_occurred": false
+}
+```
+
+**MISSING Critical Metrics:**
+- ❌ Precision (TP/TP+FP)
+- ❌ Recall (TP/TP+FN)
+- ❌ F1-Score
+- ❌ False Positive count
+- ❌ True Positive count
+- ❌ Attack detection rate
+- ❌ Confusion matrix
+
+**Gap Impact:**
+- Cannot claim RPM attack detection capability
+- Cannot report accuracy percentages
+- Cannot compare to other attack types
+- White paper must state "system tested but performance unknown"
+
+**Required Action:**
+1. Re-run rpm-1.csv and rpm-2.csv tests with detection performance logging enabled
+2. Document precision, recall, FP rate for RPM spoofing attacks
+3. Compare results to Decision Tree performance on RPM datasets
+4. Update white paper with actual performance metrics
+
+---
+
+### 2. Accessory Attacks ⚠️ MEDIUM PRIORITY GAP
+
+**System Testing Status:** ✅ COMPLETED
+
+**Evidence:**
+- **Location:** `academic_test_results/batch_set01_20251203_133029/accessory-1/`, `accessory-2/`
+- **Datasets:** 2 accessory attack datasets processed in batch run
+- **Test Date:** December 3, 2025
+
+**MISSING:**
+- ❌ Detection performance metrics (precision, recall, FP rate)
+- ❌ Attack characteristics documentation (what is an "accessory attack"?)
+- ❌ Comparison to baseline detection methods
+
+**Gap Impact:**
+- Cannot report accessory attack detection capability
+- Attack type not explained in white paper Background section
+- No evidence of detection effectiveness
+
+**Required Action:**
+1. Extract and document detection results from batch test logs
+2. Define "accessory attack" characteristics
+3. Report precision/recall/FP metrics
+4. Add to white paper if results are significant
+
+---
+
+### 3. Force Neutral Attacks ⚠️ MEDIUM PRIORITY GAP
+
+**System Testing Status:** ✅ COMPLETED
+
+**Evidence:**
+- **Location:** `academic_test_results/batch_set01_20251203_133029/force-neutral-1/`, `force-neutral-2/`
+- **Datasets:** 2 force neutral attack datasets processed
+- **Test Date:** December 3, 2025
+
+**Partial Results Found (November 30 test):**
+- Precision: 0.91%
+- Recall: 100%
+- F1-Score: 0.018
+- False Positives: 708,935
+
+**MISSING:**
+- ❌ December 3 batch test performance results
+- ❌ Attack definition and characteristics
+- ❌ Why such high FP rate (0.91% precision)?
+- ❌ Comparison across different detection methods
+
+**Gap Impact:**
+- Extremely low precision (0.91%) suggests detection method is ineffective
+- Cannot determine if December optimization improved results
+- Attack type unexplained in white paper
+
+**Required Action:**
+1. Document December 3 batch test results
+2. Investigate why precision is so low (99.09% FP rate)
+3. Define what "force neutral" attack means
+4. Determine if this attack type should be included in white paper claims
+
+---
+
+### 4. Standstill Attacks ⚠️ MEDIUM PRIORITY GAP
+
+**System Testing Status:** ✅ COMPLETED
+
+**Evidence:**
+- **Location:** `academic_test_results/batch_set01_20251203_133029/standstill-1/`, `standstill-2/`
+- **Previous Test Results Found (via docs):** 57.97% recall (1,739/3,000 detected)
+
+**MISSING:**
+- ❌ False positive rate documentation
+- ❌ Precision metric
+- ❌ Complete confusion matrix
+- ❌ Comparison to other attack types
+- ❌ Attack characteristics definition
+
+**Gap Impact:**
+- Partial performance data (57.97% recall) but incomplete
+- Cannot assess overall effectiveness without FP rate
+- Attack type not fully explained
+
+**Required Action:**
+1. Extract complete performance metrics from batch tests
+2. Document FP rate and precision
+3. Define standstill attack characteristics
+4. Assess if 57.97% recall is acceptable for this attack type
+
+---
+
+### 5. Replay Attacks 🔴 CRITICAL GAP
+
+**System Testing Status:** ❌ NO EVIDENCE FOUND
+
+**White Paper Claim:**
+> "Replay Attacks: Detection method exists but **NOT VALIDATED**"
+
+**Code Implementation Found:**
+- Rule-based replay detection exists (`check_replay` in rule engine)
+- No test datasets found
+- No test results documented
+
+**MISSING:**
+- ❌ Replay attack datasets
+- ❌ Any testing evidence
+- ❌ Performance metrics
+- ❌ Validation of detection method
+
+**Gap Impact:**
+- Cannot claim replay attack detection capability
+- Detection method is unvalidated code
+- Critical security gap in testing coverage
+
+**Required Action:**
+1. **CRITICAL:** Create or obtain replay attack datasets
+2. Validate that `check_replay` method functions correctly
+3. Test on real replay attack scenarios
+4. Document detection performance
+5. If testing cannot be completed, remove from capability claims
+
+---
+
+### 6. Speed/Accelerometer Attacks 🔴 CRITICAL GAP
+
+**System Testing Status:** ❌ NO EVIDENCE FOUND
+
+**White Paper Claim:**
+> "Speed Attacks: No test coverage - **UNKNOWN CAPABILITY**"
+
+**MISSING:**
+- ❌ Speed manipulation attack datasets
+- ❌ Detection method implementation
+- ❌ Any testing whatsoever
+- ❌ Even conceptual approach
+
+**Gap Impact:**
+- Complete blind spot in testing coverage
+- Cannot claim any capability for speed-based attacks
+- Attack vector completely unvalidated
+
+**Required Action:**
+1. Determine if speed attack detection is a research goal
+2. If YES: Obtain datasets, implement detection, test
+3. If NO: Remove from white paper attack type claims
+4. Update white paper to accurately reflect scope
+
+---
+
+## Testing Achievements Not Fully Documented
+
+### 1. Dual-Sigma Adaptive Timing Optimization (December 11, 2025)
+
+**Achievement:** Major breakthrough in adaptive timing detection
+
+**Results Documented (TONIGHT_SUMMARY.md):**
+- Implemented dual-sigma architecture (Tier 1: extreme, Tier 2: moderate)
+- Fixed critical bug (Tier 2 was using fixed 1-sigma)
+- **Performance:** 94.81% recall with 23.38% FPR on interval attacks
+- **Improvement:** 70% FP reduction (from 93% to 23%)
+
+**Configuration Evolution:**
+| Version | Tier 1 σ | Tier 2 σ | Recall | FPR |
+|---------|----------|----------|--------|-----|
+| Original | 1.5-2.2 | 1.0 (fixed) | 100% | 54.66% |
+| Dual v1 | 2.5-3.3 | 1.5-1.7 | 48.74% | 15.93% |
+| **Dual v2** | **2.5-3.3** | **1.3-1.7** | **94.81%** | **23.38%** |
+
+**Gap:**
+- ✅ Well documented in TONIGHT_SUMMARY.md
+- ⚠️ **NOT incorporated into white paper Findings section**
+- ⚠️ **NOT mentioned in Methodology section**
+
+**Required Action:**
+- Add dual-sigma achievement to white paper Findings
+- Document the critical bug fix and its impact
+- Explain Tier 1/Tier 2 architecture in Methodology
+
+---
+
+### 2. Batch Processing Optimization (December 16, 2025)
+
+**Achievement:** 3.8x performance improvement through batch processing
+
+**Results Documented (BATCH_PROCESSING_TEST_RESULTS.md):**
+- Baseline: 708 msg/s → Optimized: 2,715 msg/s
+- **Improvement:** 3.8x speedup
+- **Bottleneck identified:** Rule processing (1,727 msg/s), not CAN reading (29,652 msg/s)
+
+**Performance Breakdown:**
+- Pure CAN reading: 29,652 msg/s ✅
+- Rule processing (batch): 1,727 msg/s ⚠️
+- End-to-end system: 2,715 msg/s ✅
+
+**Gap:**
+- ✅ Well documented in BATCH_PROCESSING_TEST_RESULTS.md
+- ⚠️ **NOT mentioned in white paper**
+- ⚠️ Pi 4 performance section could reference this
+
+**Required Action:**
+- Consider adding to white paper Performance Optimization section
+- Reference in Recommendations for future work
+- Explain batch processing as optimization pathway
+
+---
+
+### 3. Contamination Parameter Testing (November 30, 2025)
+
+**Achievement:** Discovered that increasing contamination makes FP worse, not better
+
+**Results Documented (TONIGHT_SUMMARY.md, DECEMBER_3_SESSION_SUMMARY.md):**
+- Original (contamination=0.02): High FP but detects attacks
+- Modified (contamination=0.20): **WORSE** FP rate (100% on normal traffic!)
+- **Conclusion:** Contamination parameter is NOT the solution
+
+**Test Evidence:**
+| Dataset | contamination=0.02 FP | contamination=0.20 FP | Change |
+|---------|----------------------|----------------------|--------|
+| attack-free-1 | ~1.9M FPs | 1,952,833 FPs | 100% FP rate |
+| attack-free-2 | ~1.2M FPs | 1,265,599 FPs | 100% FP rate |
+
+**Gap:**
+- ✅ Documented in session summaries
+- ⚠️ **NOT in white paper**
+- ⚠️ Important negative result (what doesn't work)
+
+**Required Action:**
+- Consider adding to white paper Methodology or Findings
+- Document as "approach attempted but ineffective"
+- Valuable for other researchers to know
+
+---
+
+## Missing Documentation in Existing Tests
+
+### 1. December 27 Test Logs Missing
+
+**Issue:** White paper references timestamped logs but they're not in repository
+
+**Referenced Files (from white paper updates):**
+- `logs/dec27_enhanced_hybrid.log` - **NOT FOUND**
+- `logs/dec27_test3_decision_tree.log` - **NOT FOUND**
+- `logs/dec27_*adaptive.log` - **NOT FOUND**
+
+**Actual Structure Found:**
+- `test_results/dec27_*` directories exist with JSON files
+- But no `.log` files in `logs/` directory
+- `logs/` only contains `README.md`
+
+**Gap:**
+- White paper claims "timestamped execution logs" as evidence
+- Logs directory is essentially empty
+- JSON results exist but not the referenced log files
+
+**Required Action:**
+1. Clarify where actual log files are stored
+2. Update white paper references to match actual file locations
+3. OR: Generate the referenced log files from test results
+4. Ensure reproducibility claims are accurate
+
+---
+
+### 2. Batch Test Summary Incomplete
+
+**Issue:** `batch_summary.txt` shows all tests with empty results
+
+**Evidence:**
+```
+Summary: 0
+0 passed, 0 failed out of 12 tests
+```
+
+**Datasets Listed:**
+- attack-free-1, attack-free-2
+- DoS-1, DoS-2
+- accessory-1, accessory-2
+- force-neutral-1, force-neutral-2
+- rpm-1, rpm-2
+- standstill-1, standstill-2
+
+**Gap:**
+- Individual test directories have JSON files
+- But summary file shows no aggregated results
+- Cannot quickly assess batch test outcomes
+
+**Required Action:**
+1. Re-generate batch summary with actual results
+2. Create consolidated report of all 12 dataset tests
+3. Include precision, recall, FP for each dataset
+4. Use for comprehensive testing section in white paper
+
+---
+
+## Recommended Testing Priorities
+
+### Immediate (Next 7 Days)
+
+**Priority 1: Complete RPM Attack Testing** 🔴
+- Extract detection metrics from December 3 batch test
+- If incomplete, re-run with performance logging
+- Document precision, recall, FP rate
+- Update white paper claim from "UNTESTED" to actual results
+
+**Priority 2: Document Replay Attack Status** 🔴
+- Determine if replay detection method has been tested
+- If no datasets exist, explicitly state this limitation
+- Remove from capability claims if not validated
+- OR: Create test dataset and validate
+
+**Priority 3: Clarify Speed Attack Coverage** 🔴
+- Confirm no speed attack testing exists
+- Update white paper to remove from tested claims
+- Move to "Future Work" section
+
+### Short-term (Next 30 Days)
+
+**Priority 4: Extract Accessory/Force Neutral/Standstill Results** ⚠️
+- Parse batch test JSON files for detection metrics
+- Document what these attack types are
+- Report performance results
+- Assess if worth including in white paper
+
+**Priority 5: Consolidate Batch Test Summary** ⚠️
+- Create comprehensive summary of all 12 dataset tests
+- Include all performance metrics in one table
+- Use for white paper Findings section
+- Archive for reproducibility
+
+**Priority 6: Add Dual-Sigma Achievement to White Paper** ⚠️
+- Document 94.81% recall, 23% FPR achievement
+- Explain Tier 1/Tier 2 architecture
+- Include critical bug fix narrative
+- Show optimization progression
+
+### Long-term (Next 90 Days)
+
+**Priority 7: Organize Evidence Repository**
+- Create centralized test results summary
+- Consolidate logs in one location
+- Ensure all referenced files exist
+- Document reproducibility procedures
+
+**Priority 8: Complete Untested Attack Types**
+- Obtain or create replay attack datasets
+- Obtain or create speed manipulation datasets
+- Test and document results
+- Update white paper with comprehensive coverage
+
+---
+
+## White Paper Accuracy Updates Required
+
+Based on testing gaps found, these white paper sections need corrections:
+
+### 1. Update RPM Attack Claims
+
+**Current (INCORRECT):**
+> "RPM Manipulation: 2 datasets available (rpm-1.csv, rpm-2.csv) but **UNTESTED**"
+
+**Should Be:**
+> "RPM Manipulation: 2 datasets system-tested (December 3, 2025) but detection performance metrics not documented. System processed 494 samples over 13.7 minutes with stable performance (24.8% CPU, 50.9°C), but precision/recall/FP rate data not captured."
+
+OR (if metrics can be extracted):
+> "RPM Manipulation: 2 datasets tested with [X]% detection rate, [Y]% FP rate (December 3, 2025)"
+
+### 2. Update Attack Type Testing Claims
+
+**Current:**
+> "We evaluate effectiveness against three primary attack types (DoS flooding, fuzzing, and interval timing)"
+
+**Should Include:**
+> "We evaluate effectiveness against three primary attack types with comprehensive performance metrics (DoS flooding, fuzzing, and interval timing). System-level testing was conducted on five additional attack types (RPM manipulation, accessory, force neutral, standstill, and [if tested] replay), though complete detection performance documentation is pending for some vectors."
+
+### 3. Add Testing Timeline to Findings
+
+**Recommended Addition:**
+Comprehensive testing progression (November 30, 2025 - December 27, 2025):
+- November 30: Batch processing 12 datasets, contamination parameter testing
+- December 3: Initial Pi 4 baseline (759 msg/s), ML model debugging
+- December 11: Dual-sigma adaptive timing (94.81% recall, 23% FPR)
+- December 16: Batch optimization (3.8x improvement to 2,715 msg/s)
+- December 17: PCA testing (2x speedup potential)
+- December 27: Enhanced hybrid validation (98-99% DoS detection)
+
+### 4. Correct Evidence Repository Claims
+
+**Current:**
+> "Evidence File: `logs/dec27_enhanced_hybrid.log`"
+
+**Issue:** File doesn't exist in `logs/` directory
+
+**Should Reference:**
+> "Evidence Directory: `test_results/dec27_*/` with comprehensive JSON results"
+
+---
+
+## Summary Table: Testing vs Documentation Status
+
+| Dataset | Messages | System Tested | Detection Metrics | Documentation | Status |
+|---------|----------|---------------|-------------------|---------------|--------|
+| DoS-1 | 90,169 | ✅ | ✅ | ✅ | Complete |
+| DoS-2 | 324,870 | ✅ | ✅ | ✅ | Complete |
+| fuzzing-1 | 1,235,992 | ✅ | ✅ | ✅ | Complete |
+| fuzzing-2 | 1,143,087 | ✅ | ✅ | ✅ | Complete |
+| interval-1 | 634,191 | ✅ | ✅ | ✅ | Complete |
+| interval-2 | Unknown | ✅ | ✅ | ✅ | Complete |
+| **rpm-1** | 800K+ | ✅ | ❌ | ⚠️ | **Incomplete** |
+| **rpm-2** | 800K+ | ✅ | ❌ | ⚠️ | **Incomplete** |
+| **accessory-1** | Unknown | ✅ | ❌ | ⚠️ | **Incomplete** |
+| **accessory-2** | Unknown | ✅ | ❌ | ⚠️ | **Incomplete** |
+| **force-neutral-1** | Unknown | ✅ | ⚠️ | ⚠️ | **Incomplete** |
+| **force-neutral-2** | Unknown | ✅ | ❌ | ⚠️ | **Incomplete** |
+| **standstill-1** | Unknown | ✅ | ⚠️ | ⚠️ | **Incomplete** |
+| **standstill-2** | Unknown | ✅ | ❌ | ⚠️ | **Incomplete** |
+| attack-free-1 | 1,952,833 | ✅ | ✅ | ✅ | Complete |
+| attack-free-2 | 1,265,599 | ✅ | ✅ | ✅ | Complete |
+| **replay** | N/A | ❌ | ❌ | ❌ | **Not Tested** |
+| **speed** | N/A | ❌ | ❌ | ❌ | **Not Tested** |
+
+**Summary:**
+- ✅ **Complete:** 8 datasets (DoS, fuzzing, interval, attack-free)
+- ⚠️ **Incomplete:** 8 datasets (RPM, accessory, force-neutral, standstill)
+- ❌ **Not Tested:** 2 attack types (replay, speed)
+
+---
+
+## Conclusion
+
+**Key Finding:** The CANBUS_IDS project has conducted significantly more testing than currently documented or reflected in the white paper. However, a systematic gap exists: **system-level testing has been completed for many attack types, but detection performance metrics were not captured or documented.**
+
+**Immediate Actions:**
+1. 🔴 Extract RPM detection metrics from batch tests OR re-run with performance logging
+2. 🔴 Clarify replay and speed attack testing status (not tested or tested but not found?)
+3. 🔴 Update white paper claims to match actual testing evidence
+4. ⚠️ Extract detection metrics for accessory, force-neutral, standstill attacks
+5. ⚠️ Consolidate batch test results into comprehensive summary
+
+**Research Impact:**
+- Current white paper understates testing scope (RPM was tested, not "untested")
+- But also cannot claim comprehensive coverage due to missing performance metrics
+- Honest, accurate assessment requires completing missing documentation
+- Or revising claims to "system-tested but performance metrics incomplete"
+
+**Recommendation:** Prioritize extracting existing test results before conducting new tests. Evidence suggests testing was done but results weren't properly logged or summarized.
+
+---
+
+**Document Version:** 1.0  
+**Created:** January 4, 2026  
+**Author:** Gap Analysis Review  
+**Next Update:** After priority testing completion

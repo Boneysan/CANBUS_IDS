@@ -1,0 +1,74 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01/DoS-2.csv",
+    "test_date": "2025-11-30T21:08:53.831137",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 28.18406581878662,
+    "messages_processed": 311045,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 11036.200454537226,
+    "alerts_generated": 1244269,
+    "alert_rate_percent": 400.0286132231671,
+    "alerts_by_severity": {
+      "MEDIUM": 933224,
+      "LOW": 311045
+    },
+    "alerts_by_type": {
+      "Checksum Validation Failure": 311045,
+      "Counter Sequence Error": 311045,
+      "High Entropy Data": 311045,
+      "Unknown CAN ID": 311045,
+      "Seed Request Pattern": 89
+    },
+    "detection_accuracy": {
+      "true_positives": 25954,
+      "false_positives": 285091,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.08344130270539632,
+      "recall": 1.0,
+      "f1_score": 0.15403013065320667,
+      "accuracy": 0.08344130270539632
+    },
+    "latency_ms": {
+      "mean": 0.0723206636083935,
+      "median": 0.07152557373046875,
+      "min": 0.06461143493652344,
+      "max": 3.993988037109375,
+      "p95": 0.07796287536621094,
+      "p99": 0.09226799011230469
+    }
+  },
+  "system": {
+    "total_samples": 18,
+    "duration_seconds": 28.05787992477417,
+    "cpu_percent": {
+      "mean": 26.302777777777788,
+      "max": 43.5,
+      "min": 21.875
+    },
+    "cpu_percent_system": {
+      "mean": 27.93333333333333,
+      "max": 44.0,
+      "min": 15.4
+    },
+    "memory_rss_mb": {
+      "mean": 209.72092013888889,
+      "max": 226.23828125,
+      "min": 125.3671875
+    },
+    "temperature_c": {
+      "mean": 46.72777777777779,
+      "max": 48.2,
+      "min": 45.7
+    },
+    "throttling_occurred": false
+  }
+}

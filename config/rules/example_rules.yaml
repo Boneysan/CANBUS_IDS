@@ -1,0 +1,91 @@
+# Example CAN-IDS Detection Rules
+# This file contains example rules for common CAN bus attacks
+# Copy and modify these rules for your specific use case
+
+example_rules:
+  # Basic attack detection examples
+  - name: "Basic DoS Detection"
+    can_id: 0x000  # Highest priority message
+    max_frequency: 100
+    time_window: 1
+    severity: HIGH
+    description: "High priority message flooding"
+    action: alert
+
+  - name: "Simple Replay Detection"
+    can_id: 0x123
+    check_timing: true
+    expected_interval: 50
+    interval_variance: 5
+    severity: MEDIUM
+    description: "Basic replay attack detection"
+    action: alert
+
+  # Automotive specific examples
+  - name: "Engine RPM Anomaly"
+    can_id: 0x316  # Common engine RPM message ID
+    data_range_check:
+      byte_position: 0
+      min_value: 0x00
+      max_value: 0x64  # Normal RPM range
+    severity: MEDIUM
+    description: "Engine RPM outside normal range"
+    action: alert
+
+  - name: "Vehicle Speed Anomaly"
+    can_id: 0x3B6  # Common speed message ID
+    data_range_check:
+      byte_position: 1
+      min_value: 0x00
+      max_value: 0xC8  # 0-200 km/h
+    severity: HIGH
+    description: "Vehicle speed outside safe range"
+    action: alert
+
+  # Industrial CAN examples
+  - name: "Motor Control Anomaly"
+    can_id: 0x181  # CANopen motor control
+    check_data_integrity: true
+    severity: HIGH
+    description: "Motor control data integrity issue"
+    action: alert
+
+  - name: "Sensor Data Corruption"
+    can_id_range: [0x200, 0x2FF]  # Sensor data range
+    entropy_threshold: 6.0
+    severity: MEDIUM
+    description: "Sensor data appears corrupted or encrypted"
+    action: log
+
+  # Research and testing examples
+  - name: "Test Message Pattern"
+    data_pattern: "DE AD BE EF"  # Common test pattern
+    severity: LOW
+    description: "Test or research message detected"
+    action: log
+
+  - name: "Fuzzing Attempt"
+    can_id: 0x7FF  # Maximum standard CAN ID
+    severity: MEDIUM
+    description: "Potential fuzzing attempt on max CAN ID"
+    action: alert
+
+# Rule templates for common scenarios
+templates:
+  dos_protection:
+    max_frequency: 500
+    time_window: 1
+    severity: CRITICAL
+    action: alert
+
+  timing_analysis:
+    check_timing: true
+    interval_variance: 15  # ±15ms tolerance
+    severity: MEDIUM
+    action: alert
+
+  data_integrity:
+    check_checksum: true
+    check_counter: true
+    severity: MEDIUM
+    action: alert

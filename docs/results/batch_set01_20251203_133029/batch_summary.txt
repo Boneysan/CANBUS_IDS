@@ -1,0 +1,15 @@
+
+======================================
+CAN-IDS Batch Test Summary - Set 01
+Completed: Wed Dec  3 04:26:37 PM MST 2025
+======================================
+
+Test Name                 Result     Duration   Messages     Throughput   CPU %      Precision    Recall      
+------------------------- ---------- ---------- ------------ ------------ ---------- ------------ ------------
+
+All test results saved to: academic_test_results/batch_set01_20251203_133029
+
+Summary: 0
+0 passed, 0
+0 failed out of 12 tests
+

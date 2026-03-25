@@ -1,0 +1,74 @@
+{
+  "test_info": {
+    "data_file": "/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01/rpm-1.csv",
+    "test_date": "2025-11-30T21:13:54.207970",
+    "config": {
+      "sample_interval": 1.0,
+      "enable_ml": false,
+      "rules_file": "config/rules.yaml"
+    }
+  },
+  "performance": {
+    "duration_seconds": 86.3977963924408,
+    "messages_processed": 841053,
+    "messages_dropped": 0,
+    "drop_rate_percent": 0.0,
+    "throughput_msg_per_sec": 9734.658001920825,
+    "alerts_generated": 3364435,
+    "alert_rate_percent": 400.02651438137667,
+    "alerts_by_severity": {
+      "MEDIUM": 2523382,
+      "LOW": 841053
+    },
+    "alerts_by_type": {
+      "Checksum Validation Failure": 841053,
+      "Counter Sequence Error": 841053,
+      "High Entropy Data": 841053,
+      "Unknown CAN ID": 841053,
+      "Seed Request Pattern": 223
+    },
+    "detection_accuracy": {
+      "true_positives": 3338,
+      "false_positives": 837715,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.003968834306518138,
+      "recall": 1.0,
+      "f1_score": 0.007906289858608157,
+      "accuracy": 0.003968834306518138
+    },
+    "latency_ms": {
+      "mean": 0.08300924476959452,
+      "median": 0.07677078247070312,
+      "min": 0.06651878356933594,
+      "max": 9.658336639404297,
+      "p95": 0.10561943054199219,
+      "p99": 0.16641616821289062
+    }
+  },
+  "system": {
+    "total_samples": 51,
+    "duration_seconds": 87.12876296043396,
+    "cpu_percent": {
+      "mean": 25.500490196078434,
+      "max": 28.925,
+      "min": 13.425
+    },
+    "cpu_percent_system": {
+      "mean": 44.37058823529413,
+      "max": 100.0,
+      "min": 12.5
+    },
+    "memory_rss_mb": {
+      "mean": 360.96852022058823,
+      "max": 400.08203125,
+      "min": 125.23828125
+    },
+    "temperature_c": {
+      "mean": 48.760784313725466,
+      "max": 50.1,
+      "min": 46.7
+    },
+    "throttling_occurred": false
+  }
+}
