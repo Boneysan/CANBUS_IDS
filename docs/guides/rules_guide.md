@@ -20,7 +20,7 @@ This guide explains how to write custom detection rules for the CAN-IDS signatur
 
 ## Rule Basics
 
-Detection rules are defined in YAML format and stored in `config/rules.yaml` (or `config/rules_adaptive.yaml` for auto-generated rules). Each rule describes a specific attack pattern, policy violation, or anomalous behavior to detect.
+Detection rules are defined in YAML format and stored in `config/rules/rules.yaml` (or `config/rules/rules_adaptive.yaml` for auto-generated rules). Each rule describes a specific attack pattern, policy violation, or anomalous behavior to detect.
 
 ### Basic Concepts
 
@@ -32,11 +32,17 @@ Detection rules are defined in YAML format and stored in `config/rules.yaml` (or
 ### Rule File Location
 
 ```
-config/
+config/rules/
 ├── rules.yaml              # Hand-written rules
 ├── rules_adaptive.yaml     # Auto-generated from baseline data
 ├── example_rules.yaml      # Templates
-└── rules_generated.yaml    # Generated rules (alternative)
+├── rules_generated.yaml    # Generated rules (alternative)
+├── rules_generated_fixed.yaml  # Corrected generated rules
+├── rules_fuzzing_only.yaml # Fuzzing-focused rules only
+├── rules_timing_only.yaml  # Timing rules only
+├── rules_timing_1sigma.yaml  # Tight timing thresholds
+├── rules_timing_2sigma.yaml  # Loose timing thresholds
+└── fuzzing_detection_rules.yaml  # Fuzzing-specific rules
 ```
 
 ---
@@ -574,9 +580,9 @@ priority: 10  # Low-priority rules — skip if critical alert already found
 ### 5. Generate Thresholds from Data
 Instead of guessing thresholds, use baseline data:
 ```bash
-python scripts/generate_rules_from_baseline.py \
+python scripts/data/generate_rules_from_baseline.py \
   --input data/raw/attack_free_traffic.csv \
-  --output config/rules_adaptive.yaml
+  --output config/rules/rules_adaptive.yaml
 ```
 
 ### 6. Combine Rule Types
@@ -598,7 +604,7 @@ Multiple conditions on one rule are ANDed — all must match:
 ### Syntax Validation
 
 ```bash
-python -c "import yaml; yaml.safe_load(open('config/rules.yaml'))"
+python -c "import yaml; yaml.safe_load(open('config/rules/rules.yaml'))"
 ```
 
 ### Load Test
@@ -606,7 +612,7 @@ python -c "import yaml; yaml.safe_load(open('config/rules.yaml'))"
 ```bash
 python -c "
 from src.detection.rule_engine import RuleEngine
-re = RuleEngine('config/rules.yaml')
+re = RuleEngine('config/rules/rules.yaml')
 print(f'Loaded {len(re.rules)} rules')
 "
 ```
@@ -625,7 +631,7 @@ python -m pytest tests/ -k "rule_engine" --tb=short
 
 ```bash
 # Test with a real dataset
-python scripts/test_rules_on_dataset.py --rules config/rules.yaml --data test_data/attack-free-1.csv
+python main.py --mode replay --file test_data/attack-free-1.csv
 ```
 
 ---
@@ -657,15 +663,14 @@ python scripts/test_rules_on_dataset.py --rules config/rules.yaml --data test_da
 ## Resources
 
 ### Configuration Files
-- `config/rules.yaml` — Production rules
-- `config/rules_adaptive.yaml` — Auto-generated adaptive rules
-- `config/example_rules.yaml` — Templates
-- `config/fuzzing_detection_rules.yaml` — Fuzzing-specific rules
+- `config/rules/rules.yaml` — Production rules
+- `config/rules/rules_adaptive.yaml` — Auto-generated adaptive rules
+- `config/rules/example_rules.yaml` — Templates
+- `config/rules/fuzzing_detection_rules.yaml` — Fuzzing-specific rules
 
 ### Tools
-- `scripts/generate_rules_from_baseline.py` — Generate rules from normal traffic
-- `scripts/test_rules_on_dataset.py` — Test rules against datasets
-- `scripts/benchmark.py` — Performance benchmarking
+- `scripts/data/generate_rules_from_baseline.py` — Generate rules from normal traffic
+- `scripts/benchmarks/benchmark.py` — Performance benchmarking
 
 ### Documentation
 - [Implementation Status](../implementation/IMPLEMENTATION_STATUS.md) — Current feature status

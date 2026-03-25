@@ -160,7 +160,7 @@ Stage 3 adds an ML classifier that processes messages still suspicious after Sta
 ### Quick Start (Synthetic Data)
 
 ```bash
-python scripts/train_decision_tree.py --synthetic
+python scripts/training/train_decision_tree.py --synthetic
 ```
 
 This creates:
@@ -172,7 +172,7 @@ This creates:
 If you have the Vehicle_Models dataset or similar labeled CAN data:
 
 ```bash
-python scripts/train_decision_tree.py --vehicle-models /path/to/Vehicle_Models
+python scripts/training/train_decision_tree.py --vehicle-models /path/to/Vehicle_Models
 ```
 
 ### Train from the Bundled Test Data
@@ -180,7 +180,7 @@ python scripts/train_decision_tree.py --vehicle-models /path/to/Vehicle_Models
 The `test_data/` directory includes 16 labeled CSV files (attack-free, DoS, fuzzing, etc.):
 
 ```bash
-python scripts/train_decision_tree.py \
+python scripts/training/train_decision_tree.py \
   --vehicle-models . \
   --output data/models/decision_tree.pkl
 ```
@@ -204,9 +204,9 @@ The default rules use generic thresholds that work for testing but cause false p
 ### From Bundled Test Data
 
 ```bash
-python scripts/generate_rules_from_baseline.py \
+python scripts/data/generate_rules_from_baseline.py \
   --input test_data/attack-free-1.csv test_data/attack-free-2.csv \
-  --output config/rules_my_vehicle.yaml
+  --output config/rules/rules_my_vehicle.yaml
 ```
 
 ### From Your Own Captures
@@ -216,12 +216,12 @@ python scripts/generate_rules_from_baseline.py \
 candump -l can0
 
 # 2. Convert candump log to CSV
-python scripts/convert_candump.py candump-*.log data/raw/baseline.csv
+python scripts/data/convert_candump.py candump-*.log data/raw/baseline.csv
 
 # 3. Generate tuned rules
-python scripts/generate_rules_from_baseline.py \
+python scripts/data/generate_rules_from_baseline.py \
   --input data/raw/baseline.csv \
-  --output config/rules_my_vehicle.yaml
+  --output config/rules/rules_my_vehicle.yaml
 
 # 4. Use the tuned rules
 python main.py -i can0 --config config/can_ids.yaml
@@ -260,7 +260,7 @@ The `test_data/` directory contains 16 labeled CSV files from real vehicle CAN t
 Run the rule-testing script against all of them:
 
 ```bash
-python scripts/test_rules_on_dataset.py --rules config/rules_adaptive.yaml --data test_data/DoS-1.csv
+python main.py --mode replay --file test_data/DoS-1.csv
 ```
 
 ---
@@ -379,10 +379,10 @@ Processing rate: 760.00 messages/second
 ## Next Steps
 
 1. **Write custom rules** — See [rules_guide.md](rules_guide.md) for all 18 rule types with YAML examples
-2. **Tune for your vehicle** — Generate rules from baseline traffic (`scripts/generate_rules_from_baseline.py`)
-3. **Train Stage 3 ML** — `python scripts/train_decision_tree.py --synthetic`
+2. **Tune for your vehicle** — Generate rules from baseline traffic (`scripts/data/generate_rules_from_baseline.py`)
+3. **Train Stage 3 ML** — `python scripts/training/train_decision_tree.py --synthetic`
 4. **Review configuration** — See [configuration.md](configuration.md) for every parameter
-5. **Benchmark performance** — `python scripts/benchmark.py`
+5. **Benchmark performance** — `python scripts/benchmarks/benchmark.py`
 6. **Deploy to production** — Install as a systemd service on Raspberry Pi 4
 
 ---
@@ -411,7 +411,7 @@ sudo modprobe spi-bcm2835
 sudo usermod -a -G dialout $USER
 
 # Or use the setup script
-sudo python scripts/setup_vcan.py
+sudo python scripts/data/setup_vcan.py
 ```
 
 ### No Traffic Detected
@@ -435,7 +435,7 @@ sudo ip link set up can0
 ls -lh data/models/decision_tree.pkl
 
 # If missing, train it
-python scripts/train_decision_tree.py --synthetic
+python scripts/training/train_decision_tree.py --synthetic
 
 # Check logs for error
 python main.py -i vcan0 --log-level DEBUG 2>&1 | grep -i "stage 3"

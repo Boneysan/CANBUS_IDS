@@ -75,60 +75,60 @@ Unique CAN IDs: 23
 Average rate: 28.2 msg/s
 ```
 
-### 2. **Dedicated Testing Script** (`scripts/can_traffic_test.py`)
+### 2. **Dedicated Testing Script** (`scripts/benchmarks/can_traffic_test.py`)
 
 #### **Comprehensive Connectivity Test**
 ```bash
 # Full interface connectivity test
-python scripts/can_traffic_test.py --test-connectivity -i can0
+python scripts/benchmarks/can_traffic_test.py --test-connectivity -i can0
 
 # Test with statistics saving
-python scripts/can_traffic_test.py --test-connectivity -i vcan0 --save-results test_results.json
+python scripts/benchmarks/can_traffic_test.py --test-connectivity -i vcan0 --save-results test_results.json
 ```
 
 #### **Live Traffic Monitoring**
 ```bash
 # Monitor with message display
-python scripts/can_traffic_test.py --monitor -i can0 --duration 30
+python scripts/benchmarks/can_traffic_test.py --monitor -i can0 --duration 30
 
 # Monitor quietly (no individual messages)
-python scripts/can_traffic_test.py --monitor -i can0 --duration 60 --quiet
+python scripts/benchmarks/can_traffic_test.py --monitor -i can0 --duration 60 --quiet
 ```
 
 #### **CAN-IDS Detection Testing**
 ```bash
 # Test detection engines with live traffic
-python scripts/can_traffic_test.py --test-canids -i can0 --duration 15
+python scripts/benchmarks/can_traffic_test.py --test-canids -i can0 --duration 15
 
 # Test detection with generated traffic
-python scripts/can_traffic_test.py --generate-traffic --test-canids -i vcan0 --duration 10
+python scripts/benchmarks/can_traffic_test.py --generate-traffic --test-canids -i vcan0 --duration 10
 ```
 
 #### **Test Traffic Generation**
 ```bash
 # Generate 100 test messages
-python scripts/can_traffic_test.py --generate-traffic -i vcan0 --count 100
+python scripts/benchmarks/can_traffic_test.py --generate-traffic -i vcan0 --count 100
 
 # Generate traffic and monitor simultaneously
-python scripts/can_traffic_test.py --generate-traffic --monitor -i vcan0 --duration 10
+python scripts/benchmarks/can_traffic_test.py --generate-traffic --monitor -i vcan0 --duration 10
 ```
 
-### 3. **Virtual CAN Setup** (`scripts/setup_vcan.py`)
+### 3. **Virtual CAN Setup** (`scripts/data/setup_vcan.py`)
 
 For testing without real CAN hardware:
 
 ```bash
 # Setup virtual CAN interface
-sudo python scripts/setup_vcan.py
+sudo python scripts/data/setup_vcan.py
 
 # Setup with custom interface name
-sudo python scripts/setup_vcan.py --interface vcan1
+sudo python scripts/data/setup_vcan.py --interface vcan1
 
 # Setup persistent interface (survives reboot)
-sudo python scripts/setup_vcan.py --persistent
+sudo python scripts/data/setup_vcan.py --persistent
 
 # Remove virtual interface
-sudo python scripts/setup_vcan.py --remove
+sudo python scripts/data/setup_vcan.py --remove
 ```
 
 ---
@@ -140,7 +140,7 @@ sudo python scripts/setup_vcan.py --remove
 #### **Option A: Virtual CAN (No Hardware)**
 ```bash
 # Create virtual CAN interface
-sudo python scripts/setup_vcan.py --interface vcan0
+sudo python scripts/data/setup_vcan.py --interface vcan0
 
 # Verify interface is up
 ip link show vcan0
@@ -169,7 +169,7 @@ python main.py --test-interface can0
 ### **Step 3: Generate Test Traffic** (Virtual CAN)
 ```bash
 # Generate test messages
-python scripts/can_traffic_test.py --generate-traffic -i vcan0 --count 200
+python scripts/benchmarks/can_traffic_test.py --generate-traffic -i vcan0 --count 200
 
 # Or use manual cansend
 cansend vcan0 123#DEADBEEF
@@ -191,11 +191,11 @@ python main.py --monitor-traffic vcan0 --duration 30
 ### **Step 5: Test Detection Capabilities**
 ```bash
 # Test CAN-IDS detection engines
-python scripts/can_traffic_test.py --test-canids -i vcan0 --duration 15
+python scripts/benchmarks/can_traffic_test.py --test-canids -i vcan0 --duration 15
 
 # Expected results:
 # Messages processed: 100+
-# Detection engines: rule_engine, ml_detector
+# Detection engines: rule_engine (active), decision_tree_ml (if model trained)
 # Alerts generated: Depends on rules/data
 ```
 
@@ -264,7 +264,7 @@ Warning: No traffic detected (interface may be up but no messages)
 cansend can0 123#DEADBEEF
 
 # Use traffic generator
-python scripts/can_traffic_test.py --generate-traffic -i can0
+python scripts/benchmarks/can_traffic_test.py --generate-traffic -i can0
 
 # Check if other applications are using interface
 lsof | grep can0
@@ -295,7 +295,7 @@ Warning: CAN-IDS modules not available
 **Solutions:**
 ```bash
 # Ensure running from project root
-cd /home/mike/Documents/GitHub/CANBUS_IDS
+cd /path/to/CANBUS_IDS
 
 # Check Python path
 python -c "import sys; print(sys.path)"
@@ -331,7 +331,7 @@ CPU Usage: < 50%
 ### **Benchmark Commands**
 ```bash
 # Test processing performance
-python scripts/can_traffic_test.py --generate-traffic --test-canids -i vcan0 --count 1000 --duration 30 --save-results benchmark.json
+python scripts/benchmarks/can_traffic_test.py --generate-traffic --test-canids -i vcan0 --count 1000 --duration 30 --save-results benchmark.json
 
 # Monitor resource usage
 top -p $(pgrep -f "main.py")
@@ -365,7 +365,7 @@ python main.py --monitor-traffic can0 --duration 60
 #### **2. Detection Engine Validation**
 ```bash
 # Test with real traffic
-python scripts/can_traffic_test.py --test-canids -i can0 --duration 300
+python scripts/benchmarks/can_traffic_test.py --test-canids -i can0 --duration 300
 
 # Check alert rates
 # Normal: < 1% false positive rate expected
@@ -405,7 +405,7 @@ vcgencmd measure_temp
 ```bash
 # Generate high-rate traffic
 for i in {1..10}; do
-    python scripts/can_traffic_test.py --generate-traffic -i vcan0 --count 1000 &
+    python scripts/benchmarks/can_traffic_test.py --generate-traffic -i vcan0 --count 1000 &
 done
 
 # Monitor performance
@@ -427,8 +427,8 @@ python main.py --mode replay --file data/real_dataset/set_01/train_01/rpm-1.json
 ### **3. Multi-Interface Testing**
 ```bash
 # Setup multiple virtual interfaces
-sudo python scripts/setup_vcan.py --interface vcan0
-sudo python scripts/setup_vcan.py --interface vcan1
+sudo python scripts/data/setup_vcan.py --interface vcan0
+sudo python scripts/data/setup_vcan.py --interface vcan1
 
 # Test each interface
 python main.py --test-interface vcan0

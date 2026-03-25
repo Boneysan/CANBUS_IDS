@@ -23,7 +23,7 @@
 
 ### ⚠️ Remaining Gaps
 
-- `decision_tree.pkl` not committed — must be trained locally before Stage 3 activates (`python scripts/train_decision_tree.py --synthetic`)
+- `decision_tree.pkl` not committed — must be trained locally before Stage 3 activates (`python scripts/training/train_decision_tree.py --synthetic`)
 - Rule thresholds are still generic — vehicle-specific baseline extraction would reduce 8.43% FPR further
 - End-to-end Pi 4 benchmark of the full 3-stage pipeline not yet measured (Stages 1+2+3 combined)
 - IsolationForest (`ml_based`) commented out — intentional; 15 msg/s is too slow for real-time
@@ -33,9 +33,9 @@
 Rules use generic thresholds. For your specific vehicle, extract baselines from normal traffic:
 
 ```bash
-python scripts/generate_rules_from_baseline.py \
+python scripts/data/generate_rules_from_baseline.py \
   --input test_data/attack-free-1.csv test_data/attack-free-2.csv \
-  --output config/rules_my_vehicle.yaml
+  --output config/rules/rules_my_vehicle.yaml
 ```
 
 The script calculates per-CAN-ID `interval_mean`, `interval_std`, and `freq_last_1s` statistics and generates thresholds at mean ± 3σ (covers 99.7% of normal traffic). This is expected to push FPR below 5%.
@@ -93,27 +93,66 @@ src/
 │   ├── prefilter.py                # Stage 1 — fast statistical pre-filter (NEW Dec 14)
 │   ├── decision_tree_detector.py   # Stage 3 — Decision Tree ML, 8,000+ msg/s (NEW Dec 14)
 │   ├── ml_detector.py              # Legacy IsolationForest — code present, not in real-time path
-│   └── multistage_detector.py      # Enhanced multi-stage pipeline framework
+│   ├── multistage_detector.py      # Enhanced multi-stage pipeline framework
+│   ├── advanced_detectors.py       # Advanced detection algorithms
+│   ├── can_feature_engineering.py  # CAN-specific feature engineering
+│   ├── detectors.py                # Base detector classes
+│   ├── enhanced_features.py        # Enhanced feature extraction
+│   ├── enhanced_ml_detector.py     # Enhanced ML detection pipeline
+│   ├── ensemble_crosscheck_detector.py  # Ensemble cross-validation detector
+│   ├── improved_detectors.py       # Improved detector implementations
+│   ├── utils.py                    # Detection utilities
+│   ├── vehicle_calibration.py      # Per-vehicle threshold calibration
+│   ├── vehicle_models_compat.py    # Vehicle models compatibility layer
+│   └── weighted_ensemble_detector.py  # Weighted ensemble detector
+├── models/
+│   ├── evaluate.py                 # Model evaluation utilities
+│   └── train_model.py              # Model training pipeline
+├── monitoring/
+│   └── resource_monitor.py         # CPU/memory/temperature monitoring
 ├── preprocessing/
 │   ├── feature_extractor.py        # 50 basic + 8 enhanced research features
+│   ├── feature_reduction.py        # Dimensionality reduction utilities
 │   └── normalizer.py               # Data normalization
 └── alerts/
     ├── alert_manager.py            # Alert coordination and deduplication
     └── notifiers.py                # Notification channels
 
 scripts/
-├── train_decision_tree.py          # Train Stage 3 model (--synthetic or --vehicle-models)
-├── generate_rules_from_baseline.py # Auto-generate vehicle-specific rule thresholds
-├── convert_candump.py              # Convert candump logs to CSV
-├── comprehensive_test.py           # Main testing framework
-├── benchmark.py                    # Performance benchmarking
-└── batch_test_set01.sh             # Batch testing script
+├── batch_test_set01.sh             # Batch testing script
+├── training/
+│   ├── train_decision_tree.py      # Train Stage 3 model (--synthetic or --vehicle-models)
+│   ├── train_dual_models.py        # Train dual-model configuration
+│   └── train_with_pca.py           # Train with PCA dimensionality reduction
+├── data/
+│   ├── generate_rules_from_baseline.py  # Auto-generate vehicle-specific rule thresholds
+│   ├── convert_candump.py          # Convert candump logs to CSV
+│   ├── generate_dataset.py         # Dataset generation utilities
+│   ├── import_real_dataset.py      # Import external CAN datasets
+│   └── setup_vcan.py               # Virtual CAN interface setup
+└── benchmarks/
+    ├── benchmark.py                # Performance benchmarking
+    ├── can_traffic_test.py         # CAN traffic testing and connectivity
+    ├── comprehensive_test.py       # Main testing framework
+    ├── fast_metrics_test.py        # Fast metrics evaluation
+    ├── quick_attack_test.py        # Quick attack scenario testing
+    ├── quick_fp_test.py            # Quick false positive testing
+    └── quick_throughput_test.py    # Quick throughput testing
 
 config/
 ├── can_ids.yaml                    # Main config (Stage 1+2+3 all enabled)
 ├── can_ids_rpi4.yaml               # Pi 4 optimized (reduced buffers, 1 thread)
-├── rules_adaptive.yaml             # Auto-generated adaptive rules (recommended)
-└── rules.yaml                      # Hand-written production rules
+└── rules/
+    ├── rules.yaml                  # Hand-written production rules
+    ├── rules_adaptive.yaml         # Auto-generated adaptive rules (recommended)
+    ├── example_rules.yaml          # Templates and examples
+    ├── fuzzing_detection_rules.yaml  # Fuzzing-specific rules
+    ├── rules_fuzzing_only.yaml     # Fuzzing-focused rules only
+    ├── rules_generated.yaml        # Generated rules
+    ├── rules_generated_fixed.yaml  # Corrected generated rules
+    ├── rules_timing_1sigma.yaml    # Tight timing thresholds (more alerts)
+    ├── rules_timing_2sigma.yaml    # Loose timing thresholds (fewer alerts)
+    └── rules_timing_only.yaml      # Timing rules only
 
 data/
 └── models/                         # ML models
@@ -227,10 +266,10 @@ python main.py -i can0 --config config/can_ids_rpi4.yaml
 
 ```bash
 # Quick — synthetic data
-python scripts/train_decision_tree.py --synthetic
+python scripts/training/train_decision_tree.py --synthetic
 
 # Better — from bundled test data
-python scripts/train_decision_tree.py --vehicle-models . --output data/models/decision_tree.pkl
+python scripts/training/train_decision_tree.py --vehicle-models . --output data/models/decision_tree.pkl
 
 # Verify Stage 3 activates
 python main.py -i vcan0 --log-level DEBUG 2>&1 | grep -i "stage 3"
@@ -239,9 +278,9 @@ python main.py -i vcan0 --log-level DEBUG 2>&1 | grep -i "stage 3"
 ### Generate Vehicle-Specific Rules
 
 ```bash
-python scripts/generate_rules_from_baseline.py \
+python scripts/data/generate_rules_from_baseline.py \
   --input test_data/attack-free-1.csv test_data/attack-free-2.csv \
-  --output config/rules_my_vehicle.yaml
+  --output config/rules/rules_my_vehicle.yaml
 ```
 
 ### Run Test Suite
@@ -285,7 +324,7 @@ python -m pytest tests/test_rule_engine_phase1.py \
 detection_modes:
   - rule_based            # Stage 2: always active
 
-rules_file: config/rules_adaptive.yaml
+rules_file: config/rules/rules_adaptive.yaml
 
 decision_tree:
   enabled: true           # Stage 3: active if model file exists
@@ -344,7 +383,7 @@ Full details: [docs/development_logs/CHANGELOG.md](../development_logs/CHANGELOG
 ls -lh data/models/decision_tree.pkl
 
 # Train it
-python scripts/train_decision_tree.py --synthetic
+python scripts/training/train_decision_tree.py --synthetic
 
 # Confirm activation
 python main.py -i vcan0 --log-level DEBUG 2>&1 | grep -i "stage 3"
@@ -352,15 +391,15 @@ python main.py -i vcan0 --log-level DEBUG 2>&1 | grep -i "stage 3"
 
 ### High False Positive Rate
 
-1. Generate vehicle-specific rules: `scripts/generate_rules_from_baseline.py`
-2. Use adaptive rules: set `rules_file: config/rules_adaptive.yaml`
+1. Generate vehicle-specific rules: `scripts/data/generate_rules_from_baseline.py`
+2. Use adaptive rules: set `rules_file: config/rules/rules_adaptive.yaml`
 3. See [rules_guide.md](rules_guide.md) > Troubleshooting
 
 ### System Too Slow
 
 1. Confirm pre-filter is enabled (`prefilter.enabled: true`)
 2. Ensure `ml_based` is not in `detection_modes` (IsolationForest at 15 msg/s)
-3. Profile: `python -m cProfile scripts/comprehensive_test.py test_data/DoS-1.csv`
+3. Profile: `python -m cProfile scripts/benchmarks/comprehensive_test.py test_data/DoS-1.csv`
 
 ### Import Errors
 

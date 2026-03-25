@@ -18,7 +18,7 @@ bustype: socketcan
 detection_modes:
   - rule_based
 
-rules_file: config/rules.yaml
+rules_file: config/rules/rules.yaml
 
 alerts:
   log_file: logs/alerts.json
@@ -50,7 +50,7 @@ Controls which detection engines are active. This is the most important section.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `detection_modes` | list | `[rule_based]` | Active detection engines |
-| `rules_file` | string | `config/rules.yaml` | Path to YAML rules file |
+| `rules_file` | string | `config/rules/rules.yaml` | Path to YAML rules file |
 | `ml_threshold` | float | `0.75` | ML anomaly score threshold (0.0–1.0) |
 
 ### Available Modes
@@ -65,7 +65,7 @@ detection_modes:
   - rule_based
   # - ml_based  # Deprecated for real-time — use decision_tree instead
 
-rules_file: config/rules_adaptive.yaml
+rules_file: config/rules/rules_adaptive.yaml
 ml_threshold: 0.75
 ```
 
@@ -94,7 +94,7 @@ decision_tree:
 > **Important:** The `decision_tree.pkl` file is **not shipped** in the repository.
 > You must train it before Stage 3 will activate:
 > ```bash
-> python scripts/train_decision_tree.py --synthetic
+> python scripts/training/train_decision_tree.py --synthetic
 > ```
 > Without the model file, Stage 3 silently falls back to Stages 1+2 only.
 
@@ -347,7 +347,7 @@ python main.py -i vcan0 --log-level DEBUG
 | `performance.max_cpu_percent` | 80 | 70 | Thermal management |
 | `performance.max_memory_mb` | 500 | 300 | 2GB Pi models |
 | `performance.processing_threads` | 2 | 1 | Reduce heat |
-| `rules_file` | `rules_adaptive.yaml` | `rules.yaml` | Adaptive rules tuned for desktop testing |
+| `rules_file` | `config/rules/rules_adaptive.yaml` | `config/rules/rules.yaml` | Adaptive rules tuned for desktop testing |
 
 ---
 
@@ -357,20 +357,20 @@ Multiple rule files are available. Point `rules_file` at the one you want:
 
 | File | Description |
 |------|-------------|
-| `config/rules.yaml` | Hand-written production rules |
-| `config/rules_adaptive.yaml` | Auto-generated from baseline data (recommended for testing) |
-| `config/example_rules.yaml` | Templates and examples |
-| `config/rules_fuzzing_only.yaml` | Fuzzing-focused rules only |
-| `config/rules_timing_only.yaml` | Timing rules only |
-| `config/rules_timing_1sigma.yaml` | Tight timing thresholds (more alerts) |
-| `config/rules_timing_2sigma.yaml` | Loose timing thresholds (fewer alerts) |
+| `config/rules/rules.yaml` | Hand-written production rules |
+| `config/rules/rules_adaptive.yaml` | Auto-generated from baseline data (recommended for testing) |
+| `config/rules/example_rules.yaml` | Templates and examples |
+| `config/rules/rules_fuzzing_only.yaml` | Fuzzing-focused rules only |
+| `config/rules/rules_timing_only.yaml` | Timing rules only |
+| `config/rules/rules_timing_1sigma.yaml` | Tight timing thresholds (more alerts) |
+| `config/rules/rules_timing_2sigma.yaml` | Loose timing thresholds (fewer alerts) |
 
 To generate vehicle-specific rules from your own baseline data:
 
 ```bash
-python scripts/generate_rules_from_baseline.py \
+python scripts/data/generate_rules_from_baseline.py \
   --input test_data/attack-free-1.csv test_data/attack-free-2.csv \
-  --output config/rules_my_vehicle.yaml
+  --output config/rules/rules_my_vehicle.yaml
 ```
 
 See [rules_guide.md](rules_guide.md) for how to write custom rules covering all 18 rule types.
@@ -394,7 +394,7 @@ See [rules_guide.md](rules_guide.md) for how to write custom rules covering all 
 
 | File | How to Create | Used By |
 |------|---------------|---------|
-| `decision_tree.pkl` | `python scripts/train_decision_tree.py --synthetic` | Stage 3 Decision Tree |
+| `decision_tree.pkl` | `python scripts/training/train_decision_tree.py --synthetic` | Stage 3 Decision Tree |
 | `decision_tree_rules.txt` | Generated alongside `decision_tree.pkl` | Human-readable tree visualization |
 
 ### Files Referenced in Older Docs (Do Not Exist)
