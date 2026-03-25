@@ -107,10 +107,10 @@ python3 -c "import sklearn, numpy, pandas, joblib; print('✅ All packages impor
 grep "rules_file:" config/can_ids.yaml
 
 # Expected output:
-# rules_file: config/rules_adaptive.yaml  # Switched to adaptive rules (Dec 16, 2025)
+# rules_file: config/rules/rules_adaptive.yaml  # Switched to adaptive rules (Dec 16, 2025)
 
 # Verify rules_adaptive.yaml exists
-ls -lh config/rules_adaptive.yaml
+ls -lh config/rules/rules_adaptive.yaml
 ```
 
 ### Step 2: Transfer Test Data to Pi

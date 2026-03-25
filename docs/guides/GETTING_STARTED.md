@@ -444,7 +444,7 @@ python main.py -i vcan0 --log-level DEBUG 2>&1 | grep -i "stage 3"
 ### Too Many False Positives
 
 1. Generate vehicle-specific rules from baseline data (see [above](#generating-vehicle-specific-rules))
-2. Switch to adaptive rules: edit config to set `rules_file: config/rules_adaptive.yaml`
+2. Switch to adaptive rules: edit config to set `rules_file: config/rules/rules_adaptive.yaml`
 3. Increase thresholds in your rules file
 4. See [rules_guide.md](rules_guide.md) > Troubleshooting for detailed guidance
 

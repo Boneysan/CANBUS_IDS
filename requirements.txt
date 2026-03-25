@@ -33,8 +33,8 @@ colorlog>=6.0.0
 # flask>=2.0.0
 # flask-socketio>=5.0.0
 
-# For email notifications
-# smtplib-ssl>=1.0.0
+# For email notifications (smtplib is Python stdlib - no extra package needed)
+# requests>=2.25.0  # Use requests for webhook-based notifications instead
 
 # For webhook notifications
 # requests>=2.25.0

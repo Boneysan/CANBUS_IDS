@@ -8,8 +8,8 @@ set -e
 
 # Configuration
 DATA_DIR="/media/boneysan/Memorex USB/Masters Project/cantrainandtest/can-train-and-test/set_01/train_01"
-OUTPUT_BASE="academic_test_results/batch_set01_$(date +%Y%m%d_%H%M%S)"
-RULES_FILE="config/rules.yaml"
+OUTPUT_BASE="docs/results/batch_set01_$(date +%Y%m%d_%H%M%S)"
+RULES_FILE="config/rules/rules.yaml"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 

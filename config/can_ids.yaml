@@ -5,7 +5,7 @@ interface: can0
 bustype: socketcan
 
 # Detection settings
-rules_file: config/rules_adaptive.yaml  # Switched to adaptive rules (Dec 16, 2025) - fixes 100% FP rate
+rules_file: config/rules/rules_adaptive.yaml  # Switched to adaptive rules (Dec 16, 2025) - fixes 100% FP rate
 ml_threshold: 0.75
 detection_modes:
   - rule_based

@@ -938,7 +938,7 @@ interface: can0
 bustype: socketcan
 
 # Detection settings
-rules_file: config/rules.yaml
+rules_file: config/rules/rules.yaml
 ml_threshold: 0.75
 detection_modes:
   - rule_based

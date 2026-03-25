@@ -201,8 +201,9 @@ python main.py -i can0 --log-level DEBUG
 See the `config/` directory for configuration examples:
 - `can_ids.yaml` - Main configuration file
 - `can_ids_rpi4.yaml` - Raspberry Pi 4 optimized configuration
-- `rules.yaml` - Detection rule definitions
-- `example_rules.yaml` - Sample rules for common attacks
+- `rules/rules.yaml` - Detection rule definitions
+- `rules/rules_adaptive.yaml` - Adaptive timing rules (recommended)
+- `rules/example_rules.yaml` - Sample rules for common attacks
 
 ## Project Structure
 
@@ -218,8 +219,10 @@ can-ids/
 ├── config/                   # Configuration files
 │   ├── can_ids.yaml         # Main system configuration
 │   ├── can_ids_rpi4.yaml    # Raspberry Pi 4 optimized config
-│   ├── rules.yaml           # Detection rule definitions
-│   └── example_rules.yaml   # Sample rules for common attacks
+│   └── rules/               # Detection rule definitions
+│       ├── rules.yaml       # Base rules
+│       ├── rules_adaptive.yaml  # Adaptive timing rules
+│       └── example_rules.yaml  # Sample rules for common attacks
 │
 ├── src/                      # Source code
 │   ├── __init__.py
@@ -233,15 +236,21 @@ can-ids/
 ├── docs/                     # Documentation (organized by topic)
 │   ├── deployment/          # Raspberry Pi setup & deployment guides
 │   ├── development_logs/    # Session summaries & milestone logs
+│   ├── gap_analysis/        # Gap analysis reports & rebuttals
 │   ├── guides/              # User-facing guides & references
 │   ├── implementation/      # Feature implementation summaries
 │   ├── ml/                  # Machine learning docs & troubleshooting
 │   ├── performance/         # Performance optimization & benchmarks
 │   ├── planning/            # Architecture plans & roadmaps
+│   ├── results/             # Academic benchmark results
 │   └── testing/             # Test results & testing guides
 │
-├── scripts/                  # Utility & test scripts
+├── scripts/                  # Utility scripts
+│   ├── training/            # Model training scripts
+│   ├── data/                # Data generation & import utilities
+│   └── benchmarks/          # Performance benchmarks & traffic tests
 ├── tests/                    # Unit and integration tests
+│   └── integration/         # End-to-end integration tests
 │
 ├── raspberry-pi/            # Raspberry Pi specific files
 │   ├── systemd/            # Systemd service files
@@ -255,8 +264,6 @@ can-ids/
 │   └── samples/            # Example datasets for testing
 │
 ├── logs/                    # Log files (git-ignored)
-├── GAP_Analysis/            # Gap analysis reports
-├── academic_test_results/   # Academic benchmark results
 └── test_results/            # Test output artifacts
 ```
 
@@ -345,7 +352,7 @@ Implementation of per-CAN-ID adaptive timing thresholds for improved detection a
 
 **Current Status:** Three-tier detection system complete (Dec 14, 2025). **94.76% recall, 8.43% FPR** — 90+ percentage point improvement from baseline. See Tier 3 section above for details.
 
---- Performance Optimization for High-Throughput
+### Performance Optimization for High-Throughput
 
 Research-validated architecture for 7,000 msg/s sustained throughput:
 
@@ -369,18 +376,18 @@ pytest tests/ -v
 **Test rule-based detection on datasets:**
 ```bash
 # Test adaptive timing rules on attack dataset
-python3 scripts/test_rules_on_dataset.py data/interval-1.csv --rules config/rules_adaptive.yaml
+python3 tests/integration/test_rules_on_dataset.py data/interval-1.csv --rules config/rules/rules_adaptive.yaml
 
 # Test on attack-free baseline
-python3 scripts/test_rules_on_dataset.py data/attack-free-1.csv --rules config/rules_adaptive.yaml
+python3 tests/integration/test_rules_on_dataset.py data/attack-free-1.csv --rules config/rules/rules_adaptive.yaml
 ```
 
 **Generate vehicle-specific rules from baseline:**
 ```bash
 # Analyze attack-free traffic and generate optimized rules
-python3 scripts/generate_rules_from_baseline.py \
+python3 scripts/data/generate_rules_from_baseline.py \
   --confidence 0.683 \
-  --output config/rules_custom.yaml
+  --output config/rules/rules_custom.yaml
 
 # Confidence levels:
 # 0.997 (3-sigma): Lowest FPR, may miss subtle attacks
@@ -390,7 +397,7 @@ python3 scripts/generate_rules_from_baseline.py \
 
 ## Contributing
 
-1. Fork the repository
+1. Fork the repository at https://github.com/Boneysan/CANBUS_IDS
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)

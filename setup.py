@@ -25,16 +25,15 @@ else:
 setup(
     name="can-ids",
     version="1.0.0",
-    author="CAN-IDS Development Team",
-    author_email="canids@example.com",
+    author="Mike Zomer",
     description="Real-time intrusion detection system for CAN bus networks",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/can-ids",
+    url="https://github.com/Boneysan/CANBUS_IDS",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/can-ids/issues",
-        "Source": "https://github.com/yourusername/can-ids",
-        "Documentation": "https://can-ids.readthedocs.io",
+        "Bug Reports": "https://github.com/Boneysan/CANBUS_IDS/issues",
+        "Source": "https://github.com/Boneysan/CANBUS_IDS",
+        "Documentation": "https://github.com/Boneysan/CANBUS_IDS/tree/main/docs",
     },
     packages=find_packages(),
     classifiers=[
@@ -72,7 +71,7 @@ setup(
             "gpiozero>=1.6.0",
         ],
         "email": [
-            "smtplib-ssl>=1.0",
+            "requests>=2.25.0",  # smtplib is stdlib, use requests for webhook-based notifications
         ],
         "webhook": [
             "requests>=2.25.0",
@@ -80,7 +79,6 @@ setup(
         "all": [
             "RPi.GPIO>=0.7.0",
             "gpiozero>=1.6.0",
-            "smtplib-ssl>=1.0", 
             "requests>=2.25.0",
         ],
     },
@@ -92,11 +90,11 @@ setup(
     },
     include_package_data=True,
     package_data={
-        "": ["config/*.yaml", "config/*.conf", "data/samples/*.pcap"],
+        "": ["config/*.yaml", "config/*.conf", "config/rules/*.yaml", "data/samples/*.pcap"],
     },
     data_files=[
         ("share/can-ids/config", ["config/can_ids.yaml", "config/can_ids_rpi4.yaml"]),
-        ("share/can-ids/config", ["config/rules.yaml", "config/example_rules.yaml"]),
+        ("share/can-ids/config/rules", ["config/rules/rules.yaml", "config/rules/example_rules.yaml"]),
         ("share/can-ids/systemd", ["raspberry-pi/systemd/can-ids.service"]),
     ],
     zip_safe=False,

@@ -125,7 +125,7 @@ class CANIDSApplication:
                 self.alert_manager.add_notifier(notifier)
                 
             # Initialize rule engine
-            rules_file = self.config.get('rules_file', 'config/rules.yaml')
+            rules_file = self.config.get('rules_file', 'config/rules/rules.yaml')
             if Path(rules_file).exists():
                 self.rule_engine = RuleEngine(rules_file)
                 logger.info(f"Rule engine initialized with {len(self.rule_engine.rules)} rules")
