@@ -15,6 +15,8 @@ from collections import deque, defaultdict
 import statistics
 from dataclasses import dataclass
 
+logger = logging.getLogger(__name__)
+
 # Import PCA feature reducer for Pi 4 performance optimization
 try:
     from src.preprocessing.feature_reduction import FeatureReducer
@@ -22,8 +24,6 @@ try:
 except ImportError:
     logger.debug("FeatureReducer not available")
     FEATURE_REDUCER_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
 
 # Import compatibility classes for Vehicle_Models trained models
 # These must be importable for unpickling Vehicle_Models models

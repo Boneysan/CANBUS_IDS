@@ -9,17 +9,20 @@ __version__ = "1.0.0"
 __author__ = "CAN-IDS Development Team"
 __license__ = "MIT"
 
-from .capture import CANSniffer, PCAPReader
-from .detection import RuleEngine, MLDetector
+from .capture import CANSniffer, PCAPReader, CANDumpReader
+from .detection import RuleEngine, MLDetector, DecisionTreeDetector, FastPreFilter
 from .preprocessing import FeatureExtractor, Normalizer
 from .alerts import AlertManager
 
 __all__ = [
     'CANSniffer',
-    'PCAPReader', 
+    'PCAPReader',
+    'CANDumpReader',
     'RuleEngine',
     'MLDetector',
+    'DecisionTreeDetector',
+    'FastPreFilter',
     'FeatureExtractor',
     'Normalizer',
-    'AlertManager'
+    'AlertManager',
 ]
