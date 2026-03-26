@@ -69,7 +69,7 @@ class VehicleCalibrationManager:
         fuzzing_params : dict, optional
             Parameters for Fuzzing filter calibration
         """
-        from ensemble_crosscheck_detector import MultiAttackCrossCheckEnsemble
+        from .ensemble_crosscheck_detector import MultiAttackCrossCheckEnsemble
         
         print(f"\n{'='*70}")
         print(f"🚗 CALIBRATING FOR VEHICLE: {vehicle_name.upper()}")

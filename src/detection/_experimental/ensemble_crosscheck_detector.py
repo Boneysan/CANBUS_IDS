@@ -17,7 +17,7 @@ import pandas as pd
 from typing import Dict, List, Tuple, Optional
 import joblib
 
-from improved_detectors import (
+from .improved_detectors import (
     DoSCrossCheckFilter,
     SpoofingCrossCheckFilter,
     FuzzingCrossCheckFilter

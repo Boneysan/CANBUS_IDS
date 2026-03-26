@@ -9,7 +9,7 @@ import pandas as pd
 import joblib
 import numpy as np
 from src.detection.rule_engine import RuleEngine
-from src.detection.improved_detectors import EnsembleHybridDetector
+from src.detection._experimental.improved_detectors import EnsembleHybridDetector
 import math
 def preprocess_can_data(df):
     """Preprocess raw CAN data to add basic features needed for feature engineering."""
